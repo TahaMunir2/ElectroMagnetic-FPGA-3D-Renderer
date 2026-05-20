@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Icarus: smoke waveform",
+      "type": "shell",
+      "command": "mkdir -p build && iverilog -g2012 -Wall -o build/wave_smoke.vvp tests/tb_wave_smoke.v && vvp build/wave_smoke.vvp && code --reuse-window build/wave_smoke.vcd",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

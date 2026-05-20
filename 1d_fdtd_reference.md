@@ -3,7 +3,7 @@ First MVP:
 Design constraints:
 - 2D Ey and Hz
 - Q3.13
-- CORDIC Engine to generate sin waves for hard source
+- CORDIC Engine to generate sin waves for hard source (Xilinx provides an IP for this)
 - 64 x 64 grid
 - Boundaries zeroed causing reflection
 

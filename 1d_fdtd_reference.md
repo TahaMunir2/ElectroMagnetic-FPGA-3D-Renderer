@@ -5,6 +5,7 @@ Design constraints:
 - Q3.13
 - CORDIC Engine to generate sin waves for hard source
 - 64 x 64 grid
+- Boundaries zeroed causing reflection
 
 Modules:
 - BRAM - Yi

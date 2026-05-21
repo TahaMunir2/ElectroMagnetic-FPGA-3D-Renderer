@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 /**
  * Top-Level 1D FDTD Solver Module
  * 

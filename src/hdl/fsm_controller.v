@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 /**
  * FSM Controller - Orchestration for 1D FDTD Solver
  * 

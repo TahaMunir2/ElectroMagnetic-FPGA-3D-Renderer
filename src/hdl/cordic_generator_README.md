@@ -30,14 +30,14 @@ Outputs:
 
 ## Implementation Status
 
-- [ ] CORDIC IP core instantiation
-- [ ] Phase accumulator design
-- [ ] Fixed-point output formatting
-- [ ] Simulation verification
+- [x] Vivado CORDIC IP instantiation point
+- [x] Phase accumulator design
+- [x] Fixed-point output formatting for Icarus behavioral model
+- [x] Simulation verification
 - [ ] Integration with FDTD solver
 
 ## Notes
 
-- Reference Xilinx CORDIC IP documentation for configuration
-- Consider pipeline depth for timing requirements
-- Implement phase accumulator for frequency control
+- Define `VIVADO_CORDIC_IP` in Vivado after generating a CORDIC IP named `cordic_0`.
+- Configure the IP for 16-bit phase input and 16-bit sine/cosine output packed as `{sin, cos}` in `m_axis_dout_tdata`.
+- Without `VIVADO_CORDIC_IP`, the module uses a behavioral `$sin/$cos` model for Icarus tests only.

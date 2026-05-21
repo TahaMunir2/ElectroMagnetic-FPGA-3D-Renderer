@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 /**
  * FDTD Solver Module - 1D Electromagnetic Field Update
  * 

@@ -7,6 +7,20 @@
       "command": "mkdir -p build && iverilog -g2012 -Wall -o build/wave_smoke.vvp tests/tb_wave_smoke.v && vvp build/wave_smoke.vvp && code --reuse-window build/wave_smoke.vcd",
       "group": "test",
       "problemMatcher": []
+    },
+    {
+      "label": "Icarus: BRAM waveform",
+      "type": "shell",
+      "command": "mkdir -p build && iverilog -g2012 -Wall -o build/tb_bram_module.vvp tests/tb_bram_module.v src/hdl/bram_module.v && vvp build/tb_bram_module.vvp && code --reuse-window build/bram_module.vcd",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Icarus: CORDIC waveform",
+      "type": "shell",
+      "command": "mkdir -p build && iverilog -g2012 -Wall -o build/tb_cordic_generator.vvp tests/tb_cordic_generator.v src/hdl/cordic_generator.v && vvp build/tb_cordic_generator.vvp && code --reuse-window build/cordic_generator.vcd",
+      "group": "test",
+      "problemMatcher": []
     }
   ]
 }

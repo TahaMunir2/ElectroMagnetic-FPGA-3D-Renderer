@@ -33,13 +33,14 @@ Outputs:
 
 ## Implementation Status
 
-- [ ] Design specification complete
-- [ ] Verilog/VHDL implementation
-- [ ] Simulation tests
+- [x] Design specification complete
+- [x] Verilog implementation
+- [x] Simulation tests
 - [ ] Synthesis and place & route
 - [ ] Integration with FDTD solver
 
 ## Notes
 
-- Consider using Xilinx IP core for optimal utilization on target FPGA
-- Implement initialization routine for field reset
+- The current implementation is portable inferred RAM with a Vivado `ram_style = "block"` hint.
+- Runtime reset clears output registers; memory contents are initialized to zero for simulation/synthesis initialization. Use the system INIT phase for runtime memory clearing if needed.
+- Read/write behavior is synchronous and write-first for same-cycle writes.

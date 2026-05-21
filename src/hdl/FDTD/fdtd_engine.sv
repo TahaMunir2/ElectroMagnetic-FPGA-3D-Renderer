@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module fdtd_engine#(
 parameter FP_WIDTH = 16
 )(

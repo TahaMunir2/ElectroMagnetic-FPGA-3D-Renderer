@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module bz#(
     parameter FP_WIDTH = 16,    
     parameter FRAC_BITS = 13

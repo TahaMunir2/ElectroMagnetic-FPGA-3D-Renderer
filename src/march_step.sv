@@ -43,6 +43,9 @@ module march_step #(
     parameter int H_I        = 4,
     parameter int H_F        = H_W - 1 - H_I,
 
+    // ----- Hit-distance proxy -----
+    parameter int STEP_W     = 5,
+
     // ----- World extents -----
     // World x in [-WORLD_HALF, +WORLD_HALF].  Heightmap covers the same.
     parameter logic signed [POS_W-1:0] WORLD_HALF =
@@ -70,6 +73,7 @@ module march_step #(
     input  logic signed [H_W-1:0]      h_hit_in,
     input  logic [IDX_W-1:0]           ix_hit_in,
     input  logic [IDX_W-1:0]           iy_hit_in,
+    input  logic [STEP_W-1:0]          step_count_in,
     input  logic                       valid_in,
 
     // ----- BRAM read port (issued in stage B, returned in stage C) -----
@@ -89,6 +93,7 @@ module march_step #(
     output logic signed [H_W-1:0]      h_hit_out,
     output logic [IDX_W-1:0]           ix_hit_out,
     output logic [IDX_W-1:0]           iy_hit_out,
+    output logic [STEP_W-1:0]          step_count_out,
     output logic                       valid_out
 );
 
@@ -125,6 +130,7 @@ module march_step #(
     logic                      prevA;
     logic signed [H_W-1:0]     hHitA;
     logic [IDX_W-1:0]          ixHitA, iyHitA;
+    logic [STEP_W-1:0]         stepCountA;
     logic                      vA;
 
     always_ff @(posedge clk) begin
@@ -149,6 +155,7 @@ module march_step #(
             hHitA  <= h_hit_in;
             ixHitA <= ix_hit_in;
             iyHitA <= iy_hit_in;
+            stepCountA <= step_count_in;
             vA     <= valid_in;
         end
     end
@@ -193,6 +200,7 @@ module march_step #(
     logic                     prevB;
     logic signed [H_W-1:0]    hHitB;
     logic [IDX_W-1:0]         ixHitB, iyHitB;
+    logic [STEP_W-1:0]        stepCountB;
     logic                     vB;
 
     always_comb begin
@@ -222,6 +230,7 @@ module march_step #(
             hHitB  <= hHitA;
             ixHitB <= ixHitA;
             iyHitB <= iyHitA;
+            stepCountB <= stepCountA;
 
             // Compute the new status for this stage:
             //   If we were already non-MARCHING, keep that status.
@@ -238,6 +247,7 @@ module march_step #(
             // record them as the hit location.
             ixHitB <= (statA == ST_MARCHING && !offgrid_B) ? ix_B : ixHitA;
             iyHitB <= (statA == ST_MARCHING && !offgrid_B) ? iy_B : iyHitA;
+            stepCountB <= (statA == ST_MARCHING) ? (stepCountA + 1'b1) : stepCountA;
 
             vB <= vA;
         end
@@ -252,6 +262,7 @@ module march_step #(
     logic                     prevC;
     logic signed [H_W-1:0]    hHitC;
     logic [IDX_W-1:0]         ixHitC, iyHitC;
+    logic [STEP_W-1:0]        stepCountC;
     logic                     vC;
     logic signed [H_W-1:0]    h_C;     // BRAM data when it arrives
 
@@ -270,6 +281,7 @@ module march_step #(
             hHitC  <= hHitB;
             ixHitC <= ixHitB;
             iyHitC <= iyHitB;
+            stepCountC <= stepCountB;
             h_C    <= bram_dout;        // BRAM result arrives this cycle
             vC     <= vB;
         end
@@ -319,6 +331,7 @@ module march_step #(
                 iy_hit_out  <= iyHitC;
             end
 
+            step_count_out <= stepCountC;
             prev_below_out <= (statC == ST_MARCHING) ? below_D : prevC;
             valid_out      <= vC;
         end

@@ -11,7 +11,8 @@
 //      - ray origin O and direction D from ray_gen
 //      - heightmap BRAM read ports (one per step)
 //  Outputs:
-//      - hit status, hit position, hit indices, hit height
+//      - hit status, hit indices, hit height
+//      - step_count as a lightweight distance hint for the shader
 //
 //  Pipeline:
 //      - per step: 4 cycles
@@ -48,6 +49,7 @@ module marcher #(
     // synthesis time.  Plot a histogram of step counts in your reference
     // model and set N_STEPS at the knee of the distribution.
     parameter int N_STEPS    = 16,
+    parameter int STEP_W     = $clog2(N_STEPS + 1),
 
     // ----- Step size dt -----
     parameter logic signed [POS_W-1:0] WORLD_HALF = (1 <<< POS_F),
@@ -80,6 +82,7 @@ module marcher #(
     output logic [IDX_W-1:0]           ix_hit_out,
     output logic [IDX_W-1:0]           iy_hit_out,
     output logic signed [H_W-1:0]      h_hit_out,
+    output logic [STEP_W-1:0]          step_count_out,
     output logic [PX_W-1:0]            px_out,
     output logic [PY_W-1:0]            py_out,
     output logic                       valid_out
@@ -100,6 +103,7 @@ module marcher #(
     logic signed [H_W-1:0]      hH_chain   [N_STEPS+1];
     logic [IDX_W-1:0]           ixH_chain  [N_STEPS+1];
     logic [IDX_W-1:0]           iyH_chain  [N_STEPS+1];
+    logic [STEP_W-1:0]          step_chain [N_STEPS+1];
     logic                       v_chain    [N_STEPS+1];
 
     // -----------------------------------------------------------------
@@ -116,6 +120,7 @@ module marcher #(
     assign hH_chain[0]   = '0;
     assign ixH_chain[0]  = '0;
     assign iyH_chain[0]  = '0;
+    assign step_chain[0] = '0;
     assign v_chain[0]    = valid_in;
 
     // -----------------------------------------------------------------
@@ -136,6 +141,7 @@ module marcher #(
                 .H_W        (H_W),
                 .H_I        (H_I),
                 .H_F        (H_F),
+                .STEP_W     (STEP_W),
                 .WORLD_HALF (WORLD_HALF),
                 .DT         (DT)
             ) u_step (
@@ -154,6 +160,7 @@ module marcher #(
                 .h_hit_in       (hH_chain[gi]),
                 .ix_hit_in      (ixH_chain[gi]),
                 .iy_hit_in      (iyH_chain[gi]),
+                .step_count_in  (step_chain[gi]),
                 .valid_in       (v_chain[gi]),
 
                 .bram_addr      (bram_addr[gi]),
@@ -171,6 +178,7 @@ module marcher #(
                 .h_hit_out      (hH_chain[gi+1]),
                 .ix_hit_out     (ixH_chain[gi+1]),
                 .iy_hit_out     (iyH_chain[gi+1]),
+                .step_count_out (step_chain[gi+1]),
                 .valid_out      (v_chain[gi+1])
             );
         end
@@ -183,6 +191,7 @@ module marcher #(
     assign ix_hit_out = ixH_chain[N_STEPS];
     assign iy_hit_out = iyH_chain[N_STEPS];
     assign h_hit_out  = hH_chain[N_STEPS];
+    assign step_count_out = step_chain[N_STEPS];
     assign valid_out  = v_chain[N_STEPS];
 
     // -----------------------------------------------------------------

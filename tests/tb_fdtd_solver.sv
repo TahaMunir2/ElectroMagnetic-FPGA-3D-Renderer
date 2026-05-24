@@ -2,8 +2,8 @@
 
 module tb_fdtd_solver;
 
-    localparam CELLS      = 64;
-    localparam CELL_WIDTH = 6;
+    localparam CELLS      = 192;
+    localparam CELL_WIDTH = 8;
     localparam DATA_WIDTH = 16;
     localparam FRAC_BITS  = 13;
     localparam GRID       = CELLS * CELLS;
@@ -153,27 +153,27 @@ module tb_fdtd_solver;
         end
         $display("  PASS");
 
-        $display("TEST 3: Ey boundary (rows 0 and 63 forced zero)");
+        $display("TEST 3: Ey boundary (rows 0 and %0d forced zero)", CELLS-1);
         for (col = 0; col < CELLS; col++) begin
             if (ey_mem[flat(0, col)] !== '0) begin
                 $display("  FAIL: Ey[0][%0d] = %0d, expected 0", col, $signed(ey_mem[flat(0,col)]));
                 $finish;
             end
             if (ey_mem[flat(CELLS-1, col)] !== '0) begin
-                $display("  FAIL: Ey[63][%0d] = %0d, expected 0", col, $signed(ey_mem[flat(CELLS-1,col)]));
+                $display("  FAIL: Ey[%0d][%0d] = %0d, expected 0", CELLS-1, col, $signed(ey_mem[flat(CELLS-1,col)]));
                 $finish;
             end
         end
         $display("  PASS");
 
-        $display("TEST 4: Ex boundary (cols 0 and 63 forced zero)");
+        $display("TEST 4: Ex boundary (cols 0 and %0d forced zero)", CELLS-1);
         for (row = 0; row < CELLS; row++) begin
             if (ex_mem[flat(row, 0)] !== '0) begin
                 $display("  FAIL: Ex[%0d][0] = %0d, expected 0", row, $signed(ex_mem[flat(row,0)]));
                 $finish;
             end
             if (ex_mem[flat(row, CELLS-1)] !== '0) begin
-                $display("  FAIL: Ex[%0d][63] = %0d, expected 0", row, $signed(ex_mem[flat(row,CELLS-1)]));
+                $display("  FAIL: Ex[%0d][%0d] = %0d, expected 0", row, CELLS-1, $signed(ex_mem[flat(row,CELLS-1)]));
                 $finish;
             end
         end

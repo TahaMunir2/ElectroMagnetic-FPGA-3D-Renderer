@@ -49,11 +49,17 @@ module fdtd_solver #(
     logic signed [DATA_WIDTH-1:0] prev_ey;
     logic signed [DATA_WIDTH-1:0] prev_ex;
     logic        [2*CELL_WIDTH+1:0] counter;
+    logic        [2*CELL_WIDTH+1:0] phase_addr;
     logic        [2*CELL_WIDTH-1:0] cell_addr;
-    wire         [2*CELL_WIDTH-1:0] wr_cell = cell_addr - 3'd3;
-    localparam   [2*CELL_WIDTH:0] grid_size = CELLS*CELLS;
+    logic        [2*CELL_WIDTH-1:0] wr_cell;
+    logic                           write_valid;
+    localparam logic [2*CELL_WIDTH+1:0] GRID_SIZE       = CELLS*CELLS;
+    localparam logic [2*CELL_WIDTH+1:0] TWO_GRID_SIZE   = 2*GRID_SIZE;
+    localparam logic [2*CELL_WIDTH+1:0] THREE_GRID_SIZE = 3*GRID_SIZE;
     logic        [CELL_WIDTH-1:0] row;
     logic        [CELL_WIDTH-1:0] column;
+    logic        [CELL_WIDTH-1:0] wr_row;
+    logic        [CELL_WIDTH-1:0] wr_column;
     logic signed [DATA_WIDTH-1:0] engine_bz_left;
 
     
@@ -77,32 +83,51 @@ module fdtd_solver #(
     );
 
 always_comb begin
-    cell_addr = counter[2*CELL_WIDTH-1:0];
-    row = counter[2*CELL_WIDTH-1:CELL_WIDTH];
-    column = counter[CELL_WIDTH-1:0];
+    if (counter < GRID_SIZE) begin
+        phase_addr = counter;
+    end else if (counter < TWO_GRID_SIZE) begin
+        phase_addr = counter - GRID_SIZE;
+    end else begin
+        phase_addr = counter - TWO_GRID_SIZE;
+    end
+
+    cell_addr   = phase_addr;
+    row         = cell_addr / CELLS;
+    column      = cell_addr - (row * CELLS);
+    write_valid = (cell_addr >= 3);
+    wr_cell     = write_valid ? (cell_addr - 3'd3) : '0;
+    wr_row      = wr_cell / CELLS;
+    wr_column   = wr_cell - (wr_row * CELLS);
+
     bz_adj_rd_addr  = '0;
     ey_adj_rd_addr  = '0;
     ey_rd_addr      = '0;
     ex_rd_addr      = '0;
+    bz_rd_addr      = '0;
     engine_ey_left  = prev_ey;
     engine_ey_right = ey_rd_dout;
+    engine_bz_left  = prev_bz;
 
-    if(counter < grid_size) begin
-        bz_adj_rd_addr = cell_addr - CELLS; 
+    if(counter < GRID_SIZE) begin
         ey_rd_addr = cell_addr;
         bz_rd_addr = cell_addr;
-        engine_bz_left = bz_adj_dout;
-    end else if (counter < 2 * grid_size) begin
+        if (row != 0) begin
+            bz_adj_rd_addr = cell_addr - CELLS;
+            engine_bz_left = bz_adj_dout;
+        end
+    end else if (counter < TWO_GRID_SIZE) begin
         ex_rd_addr = cell_addr;
-        engine_bz_left = prev_bz;
         bz_rd_addr = cell_addr;
-    end else begin
+    end else if (counter < THREE_GRID_SIZE) begin
         bz_rd_addr = cell_addr;
         ey_rd_addr = cell_addr;
-        ex_rd_addr = cell_addr + 1'b1;
-        ey_adj_rd_addr = cell_addr + CELLS; 
-        engine_bz_left = prev_bz;
-        engine_ey_right = ey_adj_dout;
+        if (column != CELLS-1) begin
+            ex_rd_addr = cell_addr + 1'b1;
+        end
+        if (row != CELLS-1) begin
+            ey_adj_rd_addr = cell_addr + CELLS;
+            engine_ey_right = ey_adj_dout;
+        end
         engine_ey_left  = ey_rd_dout;
     end
 
@@ -129,27 +154,26 @@ always_ff @(posedge clk) begin
     if (rst || !solver_enable) begin
         counter <= '0;
     end else begin
-        if (counter == 3 * grid_size - 1) solver_done <= 1'b1;
+        if (counter == THREE_GRID_SIZE - 1) solver_done <= 1'b1;
 
-        if (counter < grid_size) begin
-            ey_we <= 1'b1;
-            if (row == 0 || row == CELLS-1) ey_wr_data <= '0;
+        if (counter < GRID_SIZE) begin
+            ey_we <= write_valid;
+            if (wr_row == 0 || wr_row == CELLS-1) ey_wr_data <= '0;
             else if (source_valid && wr_cell == source_addr) ey_wr_data <= source_in;
             else ey_wr_data <= engine_ey_new;
         end
         
-        else if (counter < 2 * grid_size) begin
-            ex_we <= 1'b1;
-            if (column == 0 || column == CELLS-1) ex_wr_data <= '0;
+        else if (counter < TWO_GRID_SIZE) begin
+            ex_we <= write_valid;
+            if (wr_column == 0 || wr_column == CELLS-1) ex_wr_data <= '0;
             else ex_wr_data <= engine_ex_new;          
 
-        end
-        else begin
-            bz_we      <= 1'b1;
+        end else if (counter < THREE_GRID_SIZE) begin
+            bz_we      <= write_valid;
             bz_wr_data <= engine_bz_new;
         end
-        counter <= counter + 1'b1;
 
+        if (counter < THREE_GRID_SIZE) counter <= counter + 1'b1;
 
     end
 end

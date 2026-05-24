@@ -27,7 +27,7 @@ module top_fdtd_system #(
 );
 
     localparam logic [2*ADDR_WIDTH-1:0] ADDR_ONE       = {{(2*ADDR_WIDTH-1){1'b0}}, 1'b1};
-    localparam logic [2*ADDR_WIDTH-1:0] LAST_INIT_ADDR = {(2*ADDR_WIDTH){1'b1}};
+    localparam logic [2*ADDR_WIDTH-1:0] LAST_INIT_ADDR = CELLS*CELLS - 1;
 
     typedef enum logic [1:0] {
         TOP_IDLE,
@@ -236,7 +236,7 @@ module top_fdtd_system #(
 
                 TOP_INIT: begin
                     if (init_idx == LAST_INIT_ADDR) begin
-                        init_idx  <= {ADDR_WIDTH{1'b0}};
+                        init_idx  <= {(2*ADDR_WIDTH){1'b0}};
                         fsm_start <= 1'b1;
                         top_state <= TOP_RUN;
                     end else begin

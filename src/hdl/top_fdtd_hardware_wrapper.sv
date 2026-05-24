@@ -12,14 +12,14 @@ module top_fdtd_hardware_wrapper (
     output logic [15:0] bz_probe
 );
 
-    localparam int CELLS = 64;
+    localparam int CELLS = 192;
     localparam int DATA_WIDTH = 16;
-    localparam int ADDR_WIDTH = 6;
+    localparam int ADDR_WIDTH = 8;
 
     localparam logic [15:0] NUM_ITERATIONS = 16'd4;
     localparam logic [15:0] PHASE_STEP = 16'h4000;
-    localparam logic [2*ADDR_WIDTH-1:0] SOURCE_ADDR = 12'd520;
-    localparam logic [2*ADDR_WIDTH-1:0] PROBE_ADDR  = 12'd520;
+    localparam logic [2*ADDR_WIDTH-1:0] SOURCE_ADDR = 16'd18528;
+    localparam logic [2*ADDR_WIDTH-1:0] PROBE_ADDR  = 16'd18528;
     localparam logic signed [DATA_WIDTH-1:0] C_E = 16'sd717;
     localparam logic signed [DATA_WIDTH-1:0] C_B = 16'sd2867;
 

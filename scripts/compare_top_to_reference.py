@@ -122,6 +122,7 @@ def run_hdl(repo_root: Path) -> None:
         "tests/tb_top_fdtd_reference.sv",
         "src/hdl/top_fdtd_system.sv",
         "src/hdl/fsm_controller.sv",
+        "src/hdl/fdtd_solver.sv",
         "src/hdl/fdtd_engine.sv",
         "src/hdl/Ey.sv",
         "src/hdl/Bz.sv",

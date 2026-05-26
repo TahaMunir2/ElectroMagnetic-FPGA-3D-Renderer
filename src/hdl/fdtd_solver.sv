@@ -3,12 +3,11 @@
 module fdtd_solver #(
     parameter CELLS = 64,
     parameter CELL_WIDTH = 6,
-    parameter DATA_WIDTH = 16
+    parameter DATA_WIDTH = 16,
+    parameter PML_SIZE = 6
 )(
     input  wire clk,
     input  wire rst,
-    input  wire signed [DATA_WIDTH-1:0] C_E,
-    input  wire signed [DATA_WIDTH-1:0] C_B,
     input  wire [DATA_WIDTH-1:0] source_in,
     input  wire                  source_valid,
     input  wire [2*CELL_WIDTH-1:0]  source_addr,
@@ -61,13 +60,54 @@ module fdtd_solver #(
     logic        [CELL_WIDTH-1:0] wr_row;
     logic        [CELL_WIDTH-1:0] wr_column;
     logic signed [DATA_WIDTH-1:0] engine_bz_left;
+    logic signed [DATA_WIDTH-1:0] ca_ey;
+    logic signed [DATA_WIDTH-1:0] ca_ex;
+    logic signed [DATA_WIDTH-1:0] ca_bz;
+    logic signed [DATA_WIDTH-1:0] cb_ey;
+    logic signed [DATA_WIDTH-1:0] cb_ex;
+    logic signed [DATA_WIDTH-1:0] cb_bz;
+    logic signed [CELL_WIDTH-1:0] d_ey;
+    logic signed [CELL_WIDTH-1:0] d_ex;
+    logic signed [CELL_WIDTH-1:0] d_bz;
 
-    
+    pml #(
+        .DATA_WIDTH(DATA_WIDTH),
+        .CELL_WIDTH(CELL_WIDTH),
+        .PML_SIZE(PML_SIZE)
+    ) pml_ey (
+        .d(d_ey),
+        .ca(ca_ey),
+        .cb_e(cb_ey)
+    );
+
+    pml #(
+        .DATA_WIDTH(DATA_WIDTH),
+        .CELL_WIDTH(CELL_WIDTH),
+        .PML_SIZE(PML_SIZE)
+    ) pml_ex (
+        .d(d_ex),
+        .ca(ca_ex),
+        .cb_e(cb_ex)
+    );
+
+    pml #(
+        .DATA_WIDTH(DATA_WIDTH),
+        .CELL_WIDTH(CELL_WIDTH),
+        .PML_SIZE(PML_SIZE)
+    ) pml_bz (
+        .d(d_bz),
+        .ca(ca_bz),
+        .cb_bz(cb_bz)
+    );
 
     fdtd_engine #(.FP_WIDTH(DATA_WIDTH)) fdtd_engine (
         .clk(clk),
-        .C_E(C_E),
-        .C_B(C_B),
+        .ca_ey(ca_ey),
+        .cb_ey(cb_ey),
+        .ca_ex(ca_ex),
+        .cb_ex(cb_ex),
+        .ca_bz(ca_bz),
+        .cb_bz(cb_bz),
         .ey_old(engine_ey_old),
         .ex_old(engine_ex_old),
         .bz_left(engine_bz_left),
@@ -107,6 +147,16 @@ always_comb begin
     engine_ey_left  = prev_ey;
     engine_ey_right = ey_rd_dout;
     engine_bz_left  = prev_bz;
+
+    if (wr_row < PML_SIZE) d_ey = PML_SIZE - 1 - wr_row;
+    else if (wr_row >= CELLS - PML_SIZE) d_ey = wr_row - (CELLS - PML_SIZE);
+    else d_ey = 0;
+
+    if (wr_column < PML_SIZE) d_ex = PML_SIZE - 1 - wr_column;
+    else if (wr_column >= CELLS - PML_SIZE) d_ex = wr_column - (CELLS - PML_SIZE);
+    else d_ex = 0;
+
+    d_bz = (d_ey > d_ex) ? d_ey : d_ex; // the wall closest determines damping factor
 
     if(counter < GRID_SIZE) begin
         ey_rd_addr = cell_addr;

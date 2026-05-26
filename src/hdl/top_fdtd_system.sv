@@ -12,8 +12,6 @@ module top_fdtd_system #(
     input  logic [15:0]                  phase_step,
     input  logic [2*ADDR_WIDTH-1:0]      source_addr,
     input  logic [2*ADDR_WIDTH-1:0]      probe_addr,
-    input  logic signed [DATA_WIDTH-1:0] C_E,
-    input  logic signed [DATA_WIDTH-1:0] C_B,
     output logic                         busy,
     output logic                         done,
     output logic [3:0]                   state_debug,
@@ -190,8 +188,6 @@ module top_fdtd_system #(
     ) u_solver (
         .clk(clk),
         .rst(rst),
-        .C_E(C_E),
-        .C_B(C_B),
         .source_in(source_sample),
         .source_valid(source_sample_valid),
         .source_addr(source_addr),

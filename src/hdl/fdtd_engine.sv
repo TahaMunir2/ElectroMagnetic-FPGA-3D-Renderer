@@ -4,8 +4,12 @@ module fdtd_engine #(
     parameter FP_WIDTH = 16
 )(
     input  logic                       clk,
-    input  logic signed [FP_WIDTH-1:0] C_E,
-    input  logic signed [FP_WIDTH-1:0] C_B,
+    input  logic signed [FP_WIDTH-1:0] ca_ey,
+    input  logic signed [FP_WIDTH-1:0] cb_ey,
+    input  logic signed [FP_WIDTH-1:0] ca_ex,
+    input  logic signed [FP_WIDTH-1:0] cb_ex,
+    input  logic signed [FP_WIDTH-1:0] ca_bz,
+    input  logic signed [FP_WIDTH-1:0] cb_bz,
     input  logic signed [FP_WIDTH-1:0] ey_old,
     input  logic signed [FP_WIDTH-1:0] ex_old,
     input  logic signed [FP_WIDTH-1:0] bz_left,
@@ -22,7 +26,8 @@ module fdtd_engine #(
 
     bz #(.FP_WIDTH(FP_WIDTH)) u_bz (
         .clk(clk),
-        .C_B(C_B),
+        .ca(ca_bz),
+        .cb(cb_bz),
         .bz_old(bz_old),
         .ey_left(ey_left),
         .ey_right(ey_right),
@@ -33,7 +38,8 @@ module fdtd_engine #(
 
     ey #(.FP_WIDTH(FP_WIDTH)) u_ey (
         .clk(clk),
-        .C_E(C_E),
+        .ca(ca_ey),
+        .cb(cb_ey),
         .ey_old(ey_old),
         .bz_left(bz_left),
         .bz_right(bz_right),
@@ -42,7 +48,8 @@ module fdtd_engine #(
 
     ex #(.FP_WIDTH(FP_WIDTH)) u_ex (
         .clk(clk),
-        .C_E(C_E),
+        .ca(ca_ex),
+        .cb(cb_ex),
         .ex_old(ex_old),
         .bz_left(bz_left),
         .bz_right(bz_right),

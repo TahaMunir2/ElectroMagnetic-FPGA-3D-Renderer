@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FPGA Renderer Control</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="side-panel" aria-label="Connection">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>FPGA Renderer</h1>
+            <p>PYNQ control surface</p>
+          </div>
+        </div>
+
+        <section class="panel-section">
+          <h2>Connection</h2>
+          <label class="field">
+            <span>Server URL</span>
+            <input id="serverUrl" type="url" value="http://192.168.2.99:8000" spellcheck="false">
+          </label>
+          <div class="button-row">
+            <button id="connectBtn" type="button">Connect</button>
+            <button id="disconnectBtn" class="secondary" type="button" disabled>Disconnect</button>
+          </div>
+          <div class="status-line">
+            <span id="statusDot" class="status-dot disconnected"></span>
+            <span id="statusText">Disconnected</span>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Preview</h2>
+          <label class="switch">
+            <input id="previewToggle" type="checkbox" checked>
+            <span>Enable MJPEG preview</span>
+          </label>
+          <div class="button-row">
+            <button id="refreshPreviewBtn" class="secondary" type="button">Refresh</button>
+          </div>
+          <p id="lastMessage" class="message">No messages yet.</p>
+        </section>
+      </aside>
+
+      <section class="controls-panel" aria-label="Renderer controls">
+        <div class="panel-header">
+          <div>
+            <h2>Renderer Controls</h2>
+            <p>Updates are throttled to about 30 Hz.</p>
+          </div>
+          <button id="resetBtn" class="secondary" type="button">Reset View</button>
+        </div>
+
+        <div class="control-grid">
+          <label class="control">
+            <span>Yaw <output id="yawValue">1024</output></span>
+            <input id="yaw" type="range" min="0" max="4095" step="1" value="1024">
+          </label>
+
+          <label class="control">
+            <span>Pitch <output id="pitchValue">128</output></span>
+            <input id="pitch" type="range" min="-1024" max="1024" step="1" value="128">
+          </label>
+
+          <label class="control">
+            <span>Camera X <output id="camera_xValue">0</output></span>
+            <input id="camera_x" type="range" min="-32768" max="32767" step="1" value="0">
+          </label>
+
+          <label class="control">
+            <span>Camera Y <output id="camera_yValue">0</output></span>
+            <input id="camera_y" type="range" min="-32768" max="32767" step="1" value="0">
+          </label>
+
+          <label class="control">
+            <span>Camera Z <output id="camera_zValue">8192</output></span>
+            <input id="camera_z" type="range" min="-32768" max="32767" step="1" value="8192">
+          </label>
+
+          <label class="control">
+            <span>Height Scale <output id="height_scaleValue">180</output></span>
+            <input id="height_scale" type="range" min="0" max="2048" step="1" value="180">
+          </label>
+
+          <label class="control compact">
+            <span>Colour Mode</span>
+            <select id="colour_mode">
+              <option value="0">Shaded</option>
+              <option value="1">Height</option>
+              <option value="2">Depth</option>
+              <option value="3">Normal</option>
+            </select>
+          </label>
+
+          <label class="control compact">
+            <span>Render Mode</span>
+            <select id="render_mode">
+              <option value="0">Normal</option>
+              <option value="1">Height Debug</option>
+              <option value="2">Depth Debug</option>
+            </select>
+          </label>
+
+          <label class="control">
+            <span>Max Depth <output id="max_depthValue">64</output></span>
+            <input id="max_depth" type="range" min="1" max="256" step="1" value="64">
+          </label>
+
+          <label class="control">
+            <span>Step Size <output id="step_sizeValue">1</output></span>
+            <input id="step_size" type="range" min="1" max="256" step="1" value="1">
+          </label>
+        </div>
+      </section>
+
+      <section class="preview-panel" aria-label="Live preview">
+        <div class="preview-header">
+          <h2>Live Preview</h2>
+          <span id="previewStatus">Waiting</span>
+        </div>
+        <div class="preview-frame">
+          <img id="previewImage" alt="Renderer preview">
+          <div id="previewPlaceholder" class="preview-placeholder">Preview disabled or unavailable</div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+

@@ -48,11 +48,22 @@ module ray_unit_top (
     localparam logic signed [DIR_W-1:0] ONE  = 16'sd8192;
     localparam logic signed [DIR_W-1:0] ZERO = 16'sd0;
 
-    // Camera: origin at (0, -1.0, 0.5), looking along +Y,
-    //         right = +X, up = +Z.  Units match Q2.13.
-    localparam logic signed [POS_W-1:0] OX =  16'sd0;
-    localparam logic signed [POS_W-1:0] OY = -16'sd8192;   // -1.0
-    localparam logic signed [POS_W-1:0] OZ =  16'sd4096;   //  0.5
+    // Camera: close above the -X/-Y side, looking diagonally toward map centre
+    // with a 45-degree downward pitch. Values are Q2.13. The height is kept
+    // low enough that the current 16-step marcher reaches the terrain.
+    localparam logic signed [POS_W-1:0] OX = -16'sd2867;   // -0.350
+    localparam logic signed [POS_W-1:0] OY = -16'sd2867;   // -0.350
+    localparam logic signed [POS_W-1:0] OZ =  16'sd3686;   //  0.450
+
+    localparam logic signed [DIR_W-1:0] FWD_X   =  16'sd4096;  //  0.500
+    localparam logic signed [DIR_W-1:0] FWD_Y   =  16'sd4096;  //  0.500
+    localparam logic signed [DIR_W-1:0] FWD_Z   = -16'sd5793;  // -0.707
+    localparam logic signed [DIR_W-1:0] RIGHT_X =  16'sd5793;  //  0.707
+    localparam logic signed [DIR_W-1:0] RIGHT_Y = -16'sd5793;  // -0.707
+    localparam logic signed [DIR_W-1:0] RIGHT_Z =  16'sd0;
+    localparam logic signed [DIR_W-1:0] UP_X    =  16'sd4096;  //  0.500
+    localparam logic signed [DIR_W-1:0] UP_Y    =  16'sd4096;  //  0.500
+    localparam logic signed [DIR_W-1:0] UP_Z    =  16'sd5793;  //  0.707
 
     // Sun direction (normalised approx.) pointing up and forward:
     //   (0, 0.707, 0.707) ≈ (0, 5793, 5793) in Q2.13
@@ -142,15 +153,15 @@ module ray_unit_top (
         .Ox                 (OX),
         .Oy                 (OY),
         .Oz                 (OZ),
-        .fwd_x              (ZERO),
-        .fwd_y              (ONE),
-        .fwd_z              (ZERO),
-        .right_x            (ONE),
-        .right_y            (ZERO),
-        .right_z            (ZERO),
-        .up_x               (ZERO),
-        .up_y               (ZERO),
-        .up_z               (ONE),
+        .fwd_x              (FWD_X),
+        .fwd_y              (FWD_Y),
+        .fwd_z              (FWD_Z),
+        .right_x            (RIGHT_X),
+        .right_y            (RIGHT_Y),
+        .right_z            (RIGHT_Z),
+        .up_x               (UP_X),
+        .up_y               (UP_Y),
+        .up_z               (UP_Z),
 
         // Sun direction
         .sun_dx             (ZERO),

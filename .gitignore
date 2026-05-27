@@ -1,1 +1,36 @@
 /build/
+
+# Vivado generated output
+vivado_project/*.jou
+vivado_project/*.log
+vivado_project/*.str
+vivado_project/*.backup.*
+vivado_project/.Xil/
+vivado_project/ray_renderer.cache/
+vivado_project/ray_renderer.gen/
+vivado_project/ray_renderer.hw/
+vivado_project/ray_renderer.ip_user_files/
+vivado_project/ray_renderer.runs/
+vivado_project/ray_renderer.sim/
+
+# Keep Vivado project and IP configuration files.
+!vivado_project/ray_renderer.xpr
+!vivado_project/ray_renderer.srcs/
+vivado_project/ray_renderer.srcs/**
+!vivado_project/ray_renderer.srcs/sources_1/
+!vivado_project/ray_renderer.srcs/sources_1/ip/
+!vivado_project/ray_renderer.srcs/sources_1/ip/*/
+!vivado_project/ray_renderer.srcs/sources_1/ip/*/*.xci
+
+# Vivado products
+*.bit
+*.bin
+*.ltx
+*.dcp
+*.rpt
+*.rpx
+*.pb
+*.wdb
+*.wcfg
+*.vcd
+*.vvp

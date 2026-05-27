@@ -28,7 +28,7 @@ module tb_shader;
     localparam int PX_W    = 10;
     localparam int PY_W    = 10;
 
-    localparam int LATENCY = 1;     // shader is 1 cycle
+    localparam int LATENCY = 5;     // shader pipeline latency
     localparam int TOLER   = 1;
 
     localparam int VPR     = 14;

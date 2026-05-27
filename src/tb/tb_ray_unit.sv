@@ -35,7 +35,7 @@ module tb_ray_unit;
     localparam int PX_W    = 2;
     localparam int PY_W    = 2;
 
-    localparam int LATENCY = 4 + 4*N_STEPS + 4 + 1;   // ray_gen + marcher + normal + shader = 25
+    localparam int LATENCY = 4 + 4*N_STEPS + 4 + 5;   // ray_gen + marcher + normal + shader = 29
     localparam int TOLER   = 1;
 
     localparam int VPR     = 5;       // px, py, r, g, b (each 16-bit)

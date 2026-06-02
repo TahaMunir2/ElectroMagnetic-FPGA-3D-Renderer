@@ -31,11 +31,10 @@ Do not commit normal Vivado run output:
 - `*.wdb`, `*.wcfg`, `*.vcd`, `*.vvp`
 - `*.cache`, `*.gen`, `*.hw`, `*.ip_user_files`, `*.runs`, `*.sim`
 
-For the D1S48 work, these generated project directories are intentionally
+For the D1S48 work, generated Vivado project directories are intentionally
 ignored:
 
-- `D1S48/vivado_project_d1s48/`
-- `D1S48/vivado_project_d1s48_camera/`
+- `D1S48/vivado_project_*/`
 
 ## Commit Guidance
 

@@ -15,6 +15,8 @@ pixel-clock cycles.
   block-design use.
 - `D1_wrapper/d1s48_renderer_core_axi_bd.v` - Verilog module-reference shim for
   Vivado block design.
+- `D1_wrapper/cube_heightmap_bram.sv` - active D1S48 mock heightmap source used
+  by the generated Vivado projects.
 
 ## Vivado Projects
 

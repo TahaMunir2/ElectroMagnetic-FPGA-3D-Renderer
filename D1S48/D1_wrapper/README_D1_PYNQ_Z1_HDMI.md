@@ -35,7 +35,7 @@ Manual setup is:
 2. Add these HDL files to Design Sources:
    - `D1S48/D1_wrapper/design1_ray_unit_hdmi_top.sv`
    - `D1S48/D1_wrapper/design1_video_timing_640x480.sv`
-   - `D1S48/D1_wrapper/heightmap_bram.sv`
+   - `D1S48/D1_wrapper/cube_heightmap_bram.sv`
    - `D1S48/design1_*.sv`
 3. Add `D1S48/D1_wrapper/pynq_z1_hdmi.xdc` to Constraints.
 4. Disable or remove `wrapper/constraints.xdc` from this HDMI constraints set.
@@ -58,11 +58,11 @@ signals line up with the RGB output from `design1_ray_unit`.
 
 ## Mock Heightmap
 
-`heightmap_bram` initializes itself by default. With `USE_MOCK_DATA=1`,
-each inferred BRAM powers up with a small synthetic terrain: a centered square
-pyramid. This removes the Vivado `mem does not have driver` warning and
-lets the HDMI renderer produce a visible image before a real map-loading path
-exists.
+`cube_heightmap_bram.sv` initializes the `heightmap_bram` module by default.
+With `USE_MOCK_DATA=1`, each inferred BRAM powers up with a small synthetic
+terrain: a central cube/plateau plus a lower surrounding hill. This removes the
+Vivado `mem does not have driver` warning and lets the HDMI renderer produce a
+visible image before a real map-loading path exists.
 
 To use an external hex file later, instantiate `heightmap_bram` with:
 

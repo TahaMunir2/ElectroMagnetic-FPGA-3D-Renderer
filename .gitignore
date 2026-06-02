@@ -1,5 +1,6 @@
 # Build/output directories
 /build/
+UI/
 /.Xil/
 
 # Python/Jupyter local output
@@ -21,9 +22,8 @@ vivado_project/ray_renderer.runs/
 vivado_project/ray_renderer.sim/
 vivado_project/ray_renderer.srcs/sources_1/bd/
 
-# Generated D1S48 Vivado project
-D1S48/vivado_project_d1s48/
-D1S48/vivado_project_d1s48_camera/
+# Generated D1S48 Vivado projects
+D1S48/vivado_project_*/
 
 # Keep the hand-maintained Vivado project entry point and known IP configuration
 # files. Generated block designs, runs, caches, and duplicate IP experiments stay

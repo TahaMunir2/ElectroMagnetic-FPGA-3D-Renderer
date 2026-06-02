@@ -104,7 +104,7 @@ if {[llength $pynq_boards] > 0} {
 set source_files [list \
     [checked_file [file join $repo_dir D1S48 D1_wrapper design1_ray_unit_hdmi_top.sv]] \
     [checked_file [file join $repo_dir D1S48 D1_wrapper design1_video_timing_640x480.sv]] \
-    [checked_file [file join $repo_dir D1S48 D1_wrapper heightmap_bram.sv]] \
+    [checked_file [file join $repo_dir D1S48 D1_wrapper cube_heightmap_bram.sv]] \
     [checked_file [file join $repo_dir D1S48 design1_ray_gen.sv]] \
     [checked_file [file join $repo_dir D1S48 design1_march_step.sv]] \
     [checked_file [file join $repo_dir D1S48 design1_marcher.sv]] \

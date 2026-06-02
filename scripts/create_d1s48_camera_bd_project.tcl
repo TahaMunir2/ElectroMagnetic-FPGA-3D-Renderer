@@ -6,6 +6,9 @@
 # To recreate:
 #   vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl -tclargs -force
 #
+# To create in a different output directory:
+#   vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl -tclargs -project_dir D:/tmp/d1s48_camera
+#
 # Output project:
 #   D1S48/vivado_project_d1s48_camera/d1s48_camera_renderer.xpr
 
@@ -27,8 +30,14 @@ for {set i 0} {$i < [llength $argv]} {incr i} {
             error "-ip_repo requires a path argument"
         }
         lappend explicit_ip_repos [file normalize [lindex $argv $i]]
+    } elseif {$arg eq "-project_dir"} {
+        incr i
+        if {$i >= [llength $argv]} {
+            error "-project_dir requires a path argument"
+        }
+        set project_dir [file normalize [lindex $argv $i]]
     } else {
-        error "Unknown argument '$arg'. Supported arguments: -force, -ip_repo <path>"
+        error "Unknown argument '$arg'. Supported arguments: -force, -ip_repo <path>, -project_dir <path>"
     }
 }
 
@@ -107,7 +116,7 @@ if {[llength $pynq_boards] > 0} {
 
 foreach rel_path {
     D1S48/D1_wrapper/design1_video_timing_640x480.sv
-    D1S48/D1_wrapper/heightmap_bram.sv
+    D1S48/D1_wrapper/cube_heightmap_bram.sv
     D1S48/D1_wrapper/camera_ctrl_axi.sv
     D1S48/D1_wrapper/d1s48_renderer_core_axi.sv
     D1S48/D1_wrapper/d1s48_renderer_core_axi_bd.v

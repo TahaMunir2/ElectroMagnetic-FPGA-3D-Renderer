@@ -14,6 +14,9 @@ vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl
 
 Use `-tclargs -force` to recreate an existing generated project.
 
+The D1S48 camera BD generator also accepts `-project_dir <path>` if the default
+generated project directory is locked or if you want a separate output copy.
+
 For `rgb2dvi`, install or point Vivado to the Digilent Vivado IP library. The
 D1S48 camera project script accepts:
 

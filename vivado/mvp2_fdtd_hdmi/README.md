@@ -1,0 +1,53 @@
+# MVP2_fdtd_hdmi — FDTD solver → D1S48 renderer → HDMI
+
+Integrates the 2D FDTD Maxwell solver (with ping-pong s_mag buffers) into Taha's
+D1S48 ray-march renderer, driving a 3D heightmap of the EM-wave magnitude out
+over HDMI on the PYNQ-Z1. PS-controllable over AXI.
+
+## Pipeline (single 25 MHz clk_pix datapath)
+```
+CORDIC → fdtd_solver → field_magnitude → ping-pong s_mag BRAMs
+       → s_mag_to_heightmap_bridge (vblank-gated) → 52 writable heightmap BRAMs
+       → D1S48 ray_unit → rgb2dvi → HDMI
+```
+- External 125 MHz (H16) → clk_wiz → 25 MHz clk_pix (whole datapath) + 125 MHz serial (rgb2dvi)
+- PS FCLK_CLK0 50 MHz → AXI domain (renderer camera AXI-Lite + FDTD GPIO)
+
+## Build
+```
+vivado -mode batch -source scripts/create_fdtd_render_project.tcl          # BD only
+RUN_IMPL=1 vivado -mode batch -source scripts/create_fdtd_render_project.tcl # + bitstream
+```
+Output: `fdtd_hdmi.bit` (+ `fdtd_hdmi.hwh`). Build result: timing met (WNS +5.4 ns @ 25 MHz),
+BRAM 114/140 (81%), LUT 21% / FF 14% / DSP 9%.
+
+## AXI map
+| Offset | Block | Notes |
+|--------|-------|-------|
+| 0x40000000 | renderer camera control | AXI4-Lite; sane defaults, optional |
+| 0x41200000 | axi_gpio_ctrl | CH1 {amplitude, phase_step}; CH2 {free_run[15], sample_req[14], mag_mode[13], solver_enable[12], source_addr[11:0]} |
+| 0x41210000 | axi_gpio_status | CH1 solver_checksum; CH2 {source_q313[31:16], bridge_busy[7], pp_frame_ready[6], pp_read_sel[5], source_latched[4], mag_busy[3], mag_done[2], source_valid[1], solver_done[0]} |
+
+## Bring-up (board person)
+1. Program `fdtd_hdmi.bit` + `fdtd_hdmi.hwh` (see `test_fdtd_hdmi.ipynb`).
+2. Set source params, then assert `solver_enable + sample_req + free_run`.
+3. Sanity check via `axi_gpio_status`: `solver_checksum` keeps changing and
+   `pp_frame_ready`/`bridge_busy` toggle ⇒ FDTD→bridge chain is live.
+4. HDMI should show an animated 3D terrain of the wave magnitude.
+
+## Tuning knob
+If the terrain looks flat or clipped, adjust `HEIGHT_SHIFT` (default 1 = ÷2) in
+`rtl/integration/s_mag_to_heightmap_bridge.sv` and rebuild — it maps |E|/|S|
+magnitude to terrain height.
+
+## Verified in simulation (iverilog, see `sim/`)
+- `tb_bridge.sv` — bridge copies all 4096 cells, correct scaling + readback.
+- `tb_freerun.sv` — solver auto-restarts on `frame_done`; pauses (no field-BRAM
+  corruption) while the magnitude scan runs.
+
+## Notes
+- `rtl/renderer/heightmap_bram.sv` is Taha's original read-only mock, kept for
+  reference; the build uses `rtl/integration/heightmap_bram_rw.sv` instead.
+- The delivered `.bit` predates the `set_clock_groups -asynchronous` line now in
+  the XDC. That constraint only cleans the timing report (TIMING-6/7); behaviour
+  is unchanged, so no rebuild is needed before the first hardware test.

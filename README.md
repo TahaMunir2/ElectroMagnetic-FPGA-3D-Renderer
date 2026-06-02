@@ -1,22 +1,45 @@
-# Electromagnetic-Simulating-General-Purpose-GPU
+# Electromagnetic FPGA 3D Renderer
 
-GPU and FPGA-accelerated electromagnetic simulation framework, focusing on 1D FDTD (Finite-Difference Time-Domain) implementation.
+FPGA renderer and electromagnetic-simulation workspace. The current active board
+target is the PYNQ-Z1, with HDMI output and PS-controlled camera registers for
+renderer debugging.
 
 ## Project Layout
 
-- `src/` - simulator implementation
-  - `hdl/` - Hardware description language modules
-  - `python/` - Python reference implementations and utilities
-- `include/` - shared headers and public interfaces
-- `tests/` - verification and regression tests
-- `examples/` - runnable examples and sample setups
-- `docs/` - design notes, setup guides, and equations
-- `scripts/` - developer utilities and automation
-- `data/` - small sample inputs and test fixtures
+- `src/` - baseline HDL, Python references, and module-level testbenches.
+- `design1/` ... `design4/` - renderer design variants.
+- `D1S48/` - 48-step Design 1 renderer variant.
+- `wrapper/` - PYNQ-Z1 HDMI/AXI wrappers for the main renderer.
+- `D1S48/D1_wrapper/` - PYNQ-Z1 HDMI/AXI wrappers for D1S48.
+- `scripts/` - Vivado Tcl generators and PYNQ-side camera helper code.
+- `notebooks/` - PYNQ Jupyter debugging notebooks.
+- `docs/` - design notes, setup guides, equations, and repo guidance.
+- `vivado_project/` - checked-in Vivado project entry point plus required `.xci`
+  IP configuration files.
+
+See [Repository Structure](docs/REPO_STRUCTURE.md) for detailed commit/ignore
+guidance.
+
+## Active FPGA Flows
+
+Generate the D1S48 timing-only HDMI project:
+
+```powershell
+vivado -mode batch -source scripts/create_d1s48_vivado_project.tcl
+```
+
+Generate the D1S48 block-design project with PS camera control:
+
+```powershell
+vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl
+```
+
+The camera-control AXI block is assigned to `0x40000000`.
 
 ## MVP: 1D FDTD Implementation
 
-Current focus on a 1D FDTD solver with the following specifications:
+The original simulation scaffold targets a 1D FDTD solver with the following
+specifications:
 
 - **Field Components**: 1D Ey and Bz
 - **Precision**: Q3.13 fixed-point
@@ -28,13 +51,11 @@ See [1D FDTD Reference](docs/1d_fdtd_reference.md) for detailed specifications.
 
 ## Status
 
-Scaffold and template structure in place. Core modules being developed:
-- BRAM module (Yi)
-- CORDIC Input Generator (Yi)
-- FDTD Solver (Taha)
-- Python reference implementation
-- FSM and Top-level module integration
+The repo now contains the renderer HDL variants, PYNQ-Z1 HDMI wrappers, Vivado
+automation scripts, and a PYNQ camera-control notebook/helper.
 
 ## Getting Started
 
-Refer to individual module READMEs in the `src/` directory for setup and compilation instructions.
+Refer to the wrapper READMEs and Vivado Tcl scripts for board builds. For PYNQ
+debugging, use `notebooks/renderer_camera_debug.ipynb` with the generated `.bit`
+and matching `.hwh` copied to the board.

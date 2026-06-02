@@ -1,4 +1,4 @@
-// PYNQ-Z1 HDMI wrapper for the ray renderer â€” DESIGN 2 (half-rate core).
+// PYNQ-Z1 HDMI wrapper for the ray renderer â€? DESIGN 2 (half-rate core).
 //
 // Architecture change vs Design 1:
 //   - The renderer core (ray_unit2) runs at 2x the pixel clock (50 MHz) and
@@ -18,7 +18,7 @@
 //   - rgb2dvi_0: as before
 //   - xpm_fifo_async (inferred via XPM macro, no IP needed)
 
-module ray_unit_hdmi_top (
+module ray_unit_hdmi_top_d2 (
     input  logic       clk,
     input  logic       rst,
 
@@ -44,7 +44,7 @@ module ray_unit_hdmi_top (
 
     localparam logic signed [DIR_W-1:0] ZERO = 16'sd0;
 
-    // Camera (unchanged from Design 1)
+    // Camera: close above the -X/-Y side, looking diagonally toward map centre.
     localparam logic signed [POS_W-1:0] OX = -16'sd2867;
     localparam logic signed [POS_W-1:0] OY = -16'sd2867;
     localparam logic signed [POS_W-1:0] OZ =  16'sd3686;
@@ -62,12 +62,12 @@ module ray_unit_hdmi_top (
     // ---------------------------------------------------------------
     //  Clocks
     // ---------------------------------------------------------------
-    logic clk_pix;     // 25 MHz  â€” HDMI scanout
-    logic clk_5x;      // 125 MHz â€” TMDS serial
-    logic clk_core;    // 50 MHz  â€” renderer (NEW)
+    logic clk_pix;     // 25 MHz  â€? HDMI scanout
+    logic clk_5x;      // 125 MHz â€? TMDS serial
+    logic clk_core;    // 50 MHz  â€? renderer (NEW)
     logic clk_locked;
 
-    clk_wiz_0 u_clk_wiz (
+    clk_wiz_1 u_clk_wiz (
         .clk_in1  (clk),
         .reset    (rst),
         .clk_out1 (clk_pix),
@@ -111,7 +111,7 @@ module ray_unit_hdmi_top (
         end
     end
 
-    // Heightmap BRAMs â€” 8 marcher + 2 normal, clocked on clk_core.
+    // Heightmap BRAMs â€? 8 marcher + 2 normal, clocked on clk_core.
     logic [ADDR_W-1:0]     mb_addr [N_STEPS/2];
     logic                  mb_re   [N_STEPS/2];
     logic signed [H_W-1:0] mb_dout [N_STEPS/2];

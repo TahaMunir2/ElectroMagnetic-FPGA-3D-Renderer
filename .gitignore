@@ -1,4 +1,11 @@
+# Build/output directories
 /build/
+/.Xil/
+
+# Python/Jupyter local output
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
 
 # Vivado generated output
 vivado_project/*.jou
@@ -12,19 +19,29 @@ vivado_project/ray_renderer.hw/
 vivado_project/ray_renderer.ip_user_files/
 vivado_project/ray_renderer.runs/
 vivado_project/ray_renderer.sim/
+vivado_project/ray_renderer.srcs/sources_1/bd/
 
-# Keep Vivado project and IP configuration files.
+# Generated D1S48 Vivado project
+D1S48/vivado_project_d1s48/
+D1S48/vivado_project_d1s48_camera/
+
+# Keep the hand-maintained Vivado project entry point and known IP configuration
+# files. Generated block designs, runs, caches, and duplicate IP experiments stay
+# ignored.
 !vivado_project/ray_renderer.xpr
 !vivado_project/ray_renderer.srcs/
 vivado_project/ray_renderer.srcs/**
 !vivado_project/ray_renderer.srcs/sources_1/
 !vivado_project/ray_renderer.srcs/sources_1/ip/
-!vivado_project/ray_renderer.srcs/sources_1/ip/*/
-!vivado_project/ray_renderer.srcs/sources_1/ip/*/*.xci
+!vivado_project/ray_renderer.srcs/sources_1/ip/clk_wiz_0/
+!vivado_project/ray_renderer.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0.xci
+!vivado_project/ray_renderer.srcs/sources_1/ip/rgb2dvi_0/
+!vivado_project/ray_renderer.srcs/sources_1/ip/rgb2dvi_0/rgb2dvi_0.xci
 
 # Vivado products
 *.bit
 *.bin
+*.hwh
 *.ltx
 *.dcp
 *.rpt
@@ -34,3 +51,13 @@ vivado_project/ray_renderer.srcs/**
 *.wcfg
 *.vcd
 *.vvp
+*.jou
+*.log
+*.str
+*.backup.*
+*.cache
+*.gen
+*.hw
+*.ip_user_files
+*.runs
+*.sim

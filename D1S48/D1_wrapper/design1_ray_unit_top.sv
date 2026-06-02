@@ -1,21 +1,21 @@
 // ============================================================================
-//  ray_unit_top.sv  â€? Vivado implementation wrapper for timing analysis
+//  ray_unit_top.sv  â€”  Vivado implementation wrapper for timing analysis
 // ============================================================================
-//  Wraps ray_unit with:
-//    - 20 inferred block RAMs (16 marcher + 4 normal)
+//  Wraps design1_ray_unit with:
+//    - 52 inferred block RAMs (48 marcher + 4 normal)
 //    - a free-running pixel counter driving valid_in/px/py
 //    - hardcoded (but non-trivial) camera parameters
 //
-//  GRID_N is set to 64 so all BRAM copies fit on PYNQ-Z1.
-//  This keeps each heightmap BRAM at 4096 x 16-bit.
-//  Increase GRID_N only if the BRAM budget allows it.
+//  GRID_N is reduced to 64 (from 256) so the 48-step build fits on an
+//  Artix-7 100T / Zynq-7020 class device if BRAM budget allows.
+//  To target a larger part, increase GRID_N back to 256 here and in the
+//  design1_ray_unit instantiation below.
 //
-//
-//  Ports are kept minimal â€?only clock, active-low reset, and the
+//  Ports are kept minimal â€” only clock, active-low reset, and the
 //  pixel output bus.  All I/O timing is false-pathed in constraints.xdc.
 // ============================================================================
 
-module ray_unit_top (
+module design1_ray_unit_top (
     input  logic        clk,
     input  logic        rst_n,
 
@@ -35,11 +35,11 @@ module ray_unit_top (
     localparam int PX_W    = 10;   // $clog2(640)
     localparam int PY_W    = 9;    // $clog2(480)
 
-    localparam int GRID_N  = 64;
+    localparam int GRID_N  = 64;   // keep â‰¤64 on Artix-7 / Zynq-7020
     localparam int IDX_W   = 6;    // $clog2(64)
     localparam int ADDR_W  = IDX_W * 2;   // 12 bits
 
-    localparam int N_STEPS = 16;
+    localparam int N_STEPS = 48;
     localparam int H_W     = 16;
     localparam int DIR_W   = 16;
     localparam int POS_W   = 16;
@@ -50,10 +50,10 @@ module ray_unit_top (
 
     // Camera: close above the -X/-Y side, looking diagonally toward map centre
     // with a 45-degree downward pitch. Values are Q2.13. The height is kept
-    // low enough that the current 16-step marcher reaches the terrain.
-    localparam logic signed [POS_W-1:0] OX = -16'sd2867;
-    localparam logic signed [POS_W-1:0] OY = -16'sd2867;
-    localparam logic signed [POS_W-1:0] OZ =  16'sd3686;
+    // low enough that the current 48-step marcher reaches the terrain.
+    localparam logic signed [POS_W-1:0] OX = -16'sd2867;   // -0.350
+    localparam logic signed [POS_W-1:0] OY = -16'sd2867;   // -0.350
+    localparam logic signed [POS_W-1:0] OZ =  16'sd3686;   //  0.450
 
     localparam logic signed [DIR_W-1:0] FWD_X   =  16'sd4096;  //  0.500
     localparam logic signed [DIR_W-1:0] FWD_Y   =  16'sd4096;  //  0.500
@@ -66,11 +66,11 @@ module ray_unit_top (
     localparam logic signed [DIR_W-1:0] UP_Z    =  16'sd5793;  //  0.707
 
     // Sun direction (normalised approx.) pointing up and forward:
-    //   (0, 0.707, 0.707) â‰?(0, 5793, 5793) in Q2.13
+    //   (0, 0.707, 0.707) â‰ˆ (0, 5793, 5793) in Q2.13
     localparam logic signed [DIR_W-1:0] SUN_D = 16'sd5793;
 
     // -------------------------------------------------------------------------
-    //  Free-running pixel counter â€?drives valid/px/py into ray_unit
+    //  Free-running pixel counter â€” drives valid/px/py into design1_ray_unit
     // -------------------------------------------------------------------------
     logic [PX_W-1:0] px_cnt;
     logic [PY_W-1:0] py_cnt;
@@ -93,7 +93,7 @@ module ray_unit_top (
     end
 
     // -------------------------------------------------------------------------
-    //  BRAM arrays â€?one instance per marcher port, one per normal port
+    //  BRAM arrays â€” one instance per marcher port, one per normal port
     // -------------------------------------------------------------------------
     logic [ADDR_W-1:0]         mb_addr [N_STEPS];
     logic                      mb_re   [N_STEPS];
@@ -131,9 +131,9 @@ module ray_unit_top (
     endgenerate
 
     // -------------------------------------------------------------------------
-    //  ray_unit instance
+    //  design1_ray_unit instance
     // -------------------------------------------------------------------------
-    ray_unit #(
+    design1_ray_unit #(
         .W        (W),
         .H        (H),
         .GRID_N   (GRID_N),

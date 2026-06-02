@@ -1,4 +1,4 @@
-// PYNQ-Z1 HDMI wrapper for the ray renderer â€” DESIGN 4 (bilinear-in-marcher,
+// PYNQ-Z1 HDMI wrapper for the ray renderer â€? DESIGN 4 (bilinear-in-marcher,
 // QUARTER-rate core).
 //
 // Architecture (same scanout/CDC structure as Designs 2/3):
@@ -82,12 +82,12 @@ module ray_unit_hdmi_top_d4 (
     // ---------------------------------------------------------------
     //  Clocks
     // ---------------------------------------------------------------
-    logic clk_pix;     // 25 MHz  â€” HDMI scanout
-    logic clk_5x;      // 125 MHz â€” TMDS serial
-    logic clk_core;    // 50 MHz  â€” renderer (NEW)
+    logic clk_pix;     // 25 MHz  â€? HDMI scanout
+    logic clk_5x;      // 125 MHz â€? TMDS serial
+    logic clk_core;    // 50 MHz  â€? renderer (NEW)
     logic clk_locked;
 
-    clk_wiz_0 u_clk_wiz (
+    clk_wiz_1 u_clk_wiz (
         .clk_in1  (clk),
         .reset    (rst),
         .clk_out1 (clk_pix),
@@ -131,9 +131,9 @@ module ray_unit_hdmi_top_d4 (
         end
     end
 
-    // Heightmap BRAMs â€” 16 marcher (8 copies) + 2 normal (1 copy),
+    // Heightmap BRAMs â€? 16 marcher (8 copies) + 2 normal (1 copy),
     // clocked on clk_core.
-    //   Marcher: flat [N_STEPS] â€” each march step owns 1 port, no sharing.
+    //   Marcher: flat [N_STEPS] â€? each march step owns 1 port, no sharing.
     logic [ADDR_W-1:0]     mb_addr [N_STEPS];
     logic                  mb_re   [N_STEPS];
     logic signed [H_W-1:0] mb_dout [N_STEPS];

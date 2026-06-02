@@ -2,7 +2,7 @@
 // Vivado infers RAMB18E2/RAMB36E2 from the (* ram_style = "block" *) attribute.
 // With ADDR_W=12 (GRID_N=64): 4096 x 16-bit = 2 x RAMB36E2 per instance.
 
-module design1_heightmap_bram #(
+module heightmap_bram #(
     parameter int ADDR_W = 12,
     parameter int DATA_W = 16,
     parameter bit USE_INIT_FILE = 1'b0,
@@ -25,34 +25,24 @@ module design1_heightmap_bram #(
         int n;
         int cx;
         int cy;
-        int ax;
-        int ay;
-        int half;
-        int maxd;
-        int height;
-        int peak;
+        int denom;
+        int saddle;
 
         if (USE_INIT_FILE) begin
             $readmemh(INIT_FILE, mem);
         end else if (USE_MOCK_DATA) begin
             n = 1 << (ADDR_W / 2);
-            half = n / 2;
-            peak = 3072;   // 0.375 in Q2.13
+            denom = (n / 2) * (n / 2);
             for (int addr_i = 0; addr_i < DEPTH; addr_i++) begin
                 x = addr_i & (n - 1);
                 y = addr_i >> (ADDR_W / 2);
-                cx = x - half;
-                cy = y - half;
-                ax = (cx < 0) ? -cx : cx;
-                ay = (cy < 0) ? -cy : cy;
-                maxd = (ax > ay) ? ax : ay;
+                cx = x - (n / 2);
+                cy = y - (n / 2);
 
-                if (maxd >= half) begin
-                    mem[addr_i] = '0;
-                end else begin
-                    height = (peak * (half - maxd)) / half;
-                    mem[addr_i] = height;
-                end
+                // Hyperbolic paraboloid: z = k * (x^2 - y^2).
+                // With DATA_W=16 and H_I=2 this produces about +/-0.5 in Q2.13.
+                saddle = ((cx * cx - cy * cy) * 4096) / denom;
+                mem[addr_i] = saddle;
             end
         end else begin
             for (int addr_i = 0; addr_i < DEPTH; addr_i++)

@@ -117,10 +117,9 @@ signals line up with the RGB output from `ray_unit`.
 ## Mock Heightmap
 
 `heightmap_bram.sv` now initializes itself by default. With `USE_MOCK_DATA=1`,
-each inferred BRAM powers up with a small synthetic terrain: a low hill and a
-central plateau. This removes the Vivado `mem does not have driver` warning and
-lets the HDMI renderer produce a visible image before a real map-loading path
-exists.
+each inferred BRAM powers up with synthetic terrain. The current renderer grid
+is `64x64`, so an external heightmap file must contain 4096 signed 16-bit
+values.
 
 To use an external hex file later, instantiate `heightmap_bram` with:
 

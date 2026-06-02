@@ -1,4 +1,4 @@
-// PYNQ-Z1 HDMI wrapper for the ray renderer â€” DESIGN 3 (bilinear-in-marcher,
+// PYNQ-Z1 HDMI wrapper for the ray renderer â€? DESIGN 3 (bilinear-in-marcher,
 // half-rate core).
 //
 // Architecture (same scanout/CDC structure as Design 2):
@@ -37,7 +37,7 @@
 //   - rgb2dvi_0: as before
 //   - xpm_fifo_async (inferred via XPM macro, no IP needed)
 
-module ray_unit_hdmi_top (
+module ray_unit_hdmi_top_d3 (
     input  logic       clk,
     input  logic       rst,
 
@@ -81,12 +81,12 @@ module ray_unit_hdmi_top (
     // ---------------------------------------------------------------
     //  Clocks
     // ---------------------------------------------------------------
-    logic clk_pix;     // 25 MHz  â€” HDMI scanout
-    logic clk_5x;      // 125 MHz â€” TMDS serial
-    logic clk_core;    // 50 MHz  â€” renderer (NEW)
+    logic clk_pix;     // 25 MHz  â€? HDMI scanout
+    logic clk_5x;      // 125 MHz â€? TMDS serial
+    logic clk_core;    // 50 MHz  â€? renderer (NEW)
     logic clk_locked;
 
-    clk_wiz_0 u_clk_wiz (
+    clk_wiz_1 u_clk_wiz (
         .clk_in1  (clk),
         .reset    (rst),
         .clk_out1 (clk_pix),
@@ -130,9 +130,9 @@ module ray_unit_hdmi_top (
         end
     end
 
-    // Heightmap BRAMs â€” 32 marcher (16 copies) + 2 normal (1 copy),
+    // Heightmap BRAMs â€? 32 marcher (16 copies) + 2 normal (1 copy),
     // clocked on clk_core.
-    //   Marcher: 2-D [N_STEPS][2] â€” each march step owns 2 ports, no sharing.
+    //   Marcher: 2-D [N_STEPS][2] â€? each march step owns 2 ports, no sharing.
     //   Each (step, port) pair maps to one heightmap_bram instance.
     logic [ADDR_W-1:0]     mb_addr [N_STEPS][2];
     logic                  mb_re   [N_STEPS][2];

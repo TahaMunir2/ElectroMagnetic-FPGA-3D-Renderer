@@ -1,59 +1,58 @@
-// AXI-controlled ray renderer core.
-// This module does not instantiate clk_wiz or rgb2dvi. Put those IP blocks in
-// the Vivado block design and connect their clocks/video ports to this core.
+// AXI-controlled D1S48 ray renderer core.
+// clk_wiz, rgb2dvi, and the Zynq PS live in the Vivado block design.
 
-module ray_renderer_core_axi (
+module d1s48_renderer_core_axi (
     (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 clk_pix CLK" *)
     (* X_INTERFACE_PARAMETER = "FREQ_HZ 25000000, ASSOCIATED_RESET rst_pix_n" *)
-    input  logic       clk_pix,
+    input  logic        clk_pix,
     (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 rst_pix_n RST" *)
     (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_LOW" *)
-    input  logic       rst_pix_n,
+    input  logic        rst_pix_n,
 
     (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 s_axi_aclk CLK" *)
     (* X_INTERFACE_PARAMETER = "FREQ_HZ 50000000, ASSOCIATED_BUSIF S_AXI, ASSOCIATED_RESET s_axi_aresetn" *)
-    input  logic       s_axi_aclk,
+    input  logic        s_axi_aclk,
     (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 s_axi_aresetn RST" *)
     (* X_INTERFACE_PARAMETER = "POLARITY ACTIVE_LOW" *)
-    input  logic       s_axi_aresetn,
+    input  logic        s_axi_aresetn,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI AWADDR" *)
-    input  logic [6:0] s_axi_awaddr,
+    input  logic [6:0]  s_axi_awaddr,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI AWPROT" *)
-    input  logic [2:0] s_axi_awprot,
+    input  logic [2:0]  s_axi_awprot,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI AWVALID" *)
-    input  logic       s_axi_awvalid,
+    input  logic        s_axi_awvalid,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI AWREADY" *)
-    output logic       s_axi_awready,
+    output logic        s_axi_awready,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WDATA" *)
     input  logic [31:0] s_axi_wdata,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WSTRB" *)
-    input  logic [3:0] s_axi_wstrb,
+    input  logic [3:0]  s_axi_wstrb,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WVALID" *)
-    input  logic       s_axi_wvalid,
+    input  logic        s_axi_wvalid,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI WREADY" *)
-    output logic       s_axi_wready,
+    output logic        s_axi_wready,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI BRESP" *)
-    output logic [1:0] s_axi_bresp,
+    output logic [1:0]  s_axi_bresp,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI BVALID" *)
-    output logic       s_axi_bvalid,
+    output logic        s_axi_bvalid,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI BREADY" *)
-    input  logic       s_axi_bready,
+    input  logic        s_axi_bready,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI ARADDR" *)
-    input  logic [6:0] s_axi_araddr,
+    input  logic [6:0]  s_axi_araddr,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI ARPROT" *)
-    input  logic [2:0] s_axi_arprot,
+    input  logic [2:0]  s_axi_arprot,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI ARVALID" *)
-    input  logic       s_axi_arvalid,
+    input  logic        s_axi_arvalid,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI ARREADY" *)
-    output logic       s_axi_arready,
+    output logic        s_axi_arready,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI RDATA" *)
     output logic [31:0] s_axi_rdata,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI RRESP" *)
-    output logic [1:0] s_axi_rresp,
+    output logic [1:0]  s_axi_rresp,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI RVALID" *)
-    output logic       s_axi_rvalid,
+    output logic        s_axi_rvalid,
     (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 S_AXI RREADY" *)
-    input  logic       s_axi_rready,
+    input  logic        s_axi_rready,
 
     output logic [23:0] vid_pData,
     output logic        vid_pVDE,
@@ -65,37 +64,32 @@ module ray_renderer_core_axi (
     localparam int H              = 480;
     localparam int PX_W           = 10;
     localparam int PY_W           = 9;
-    localparam int RENDER_LATENCY = 77;
+    localparam int RENDER_LATENCY = 206;
 
     localparam int GRID_N  = 64;
     localparam int IDX_W   = 6;
     localparam int ADDR_W  = IDX_W * 2;
 
-    localparam int N_STEPS = 16;
+    localparam int N_STEPS = 48;
     localparam int H_W     = 16;
     localparam int DIR_W   = 16;
     localparam int POS_W   = 16;
 
-    localparam logic signed [DIR_W-1:0] ONE  = 16'sd8192;
     localparam logic signed [DIR_W-1:0] ZERO = 16'sd0;
 
-    // Camera: close above the -X/-Y side, looking diagonally toward map centre
-    // with a 45-degree downward pitch. Values are Q2.13.
-    localparam logic signed [POS_W-1:0] OX = -16'sd2867;  // -0.350
-    localparam logic signed [POS_W-1:0] OY = -16'sd2867;  // -0.350
-    localparam logic signed [POS_W-1:0] OZ =  16'sd3686;  //  0.450
-
-    localparam logic signed [DIR_W-1:0] FWD_X   =  16'sd4096;  //  0.500
-    localparam logic signed [DIR_W-1:0] FWD_Y   =  16'sd4096;  //  0.500
-    localparam logic signed [DIR_W-1:0] FWD_Z   = -16'sd5793;  // -0.707
-    localparam logic signed [DIR_W-1:0] RIGHT_X =  16'sd5793;  //  0.707
-    localparam logic signed [DIR_W-1:0] RIGHT_Y = -16'sd5793;  // -0.707
+    localparam logic signed [POS_W-1:0] OX = -16'sd2867;
+    localparam logic signed [POS_W-1:0] OY = -16'sd2867;
+    localparam logic signed [POS_W-1:0] OZ =  16'sd3686;
+    localparam logic signed [DIR_W-1:0] FWD_X   =  16'sd4096;
+    localparam logic signed [DIR_W-1:0] FWD_Y   =  16'sd4096;
+    localparam logic signed [DIR_W-1:0] FWD_Z   = -16'sd5793;
+    localparam logic signed [DIR_W-1:0] RIGHT_X =  16'sd5793;
+    localparam logic signed [DIR_W-1:0] RIGHT_Y = -16'sd5793;
     localparam logic signed [DIR_W-1:0] RIGHT_Z =  16'sd0;
-    localparam logic signed [DIR_W-1:0] UP_X    =  16'sd4096;  //  0.500
-    localparam logic signed [DIR_W-1:0] UP_Y    =  16'sd4096;  //  0.500
-    localparam logic signed [DIR_W-1:0] UP_Z    =  16'sd5793;  //  0.707
-
-    localparam logic signed [DIR_W-1:0] SUN_D = 16'sd5793;
+    localparam logic signed [DIR_W-1:0] UP_X    =  16'sd4096;
+    localparam logic signed [DIR_W-1:0] UP_Y    =  16'sd4096;
+    localparam logic signed [DIR_W-1:0] UP_Z    =  16'sd5793;
+    localparam logic signed [DIR_W-1:0] SUN_D   =  16'sd5793;
 
     logic signed [15:0] shadow_Ox;
     logic signed [15:0] shadow_Oy;
@@ -159,7 +153,7 @@ module ray_renderer_core_axi (
 
     assign frame_start = (sx == 10'd0) && (sy == 10'd0);
 
-    video_timing_640x480 u_timing (
+    design1_video_timing_640x480 u_timing (
         .clk_pix      (clk_pix),
         .rst_n        (rst_pix_n),
         .sx           (sx),
@@ -188,9 +182,9 @@ module ray_renderer_core_axi (
 
     always_ff @(posedge clk_pix) begin
         if (!rst_pix_n) begin
-            commit_req_meta      <= 1'b0;
-            commit_req_sync      <= 1'b0;
-            commit_req_seen      <= 1'b0;
+            commit_req_meta       <= 1'b0;
+            commit_req_sync       <= 1'b0;
+            commit_req_seen       <= 1'b0;
             commit_ack_toggle_pix <= 1'b0;
 
             live_Ox      <= OX;
@@ -229,9 +223,9 @@ module ray_renderer_core_axi (
         end
     end
 
-    logic       hsync_pipe [0:RENDER_LATENCY-1];
-    logic       vsync_pipe [0:RENDER_LATENCY-1];
-    logic       de_pipe    [0:RENDER_LATENCY-1];
+    logic hsync_pipe [0:RENDER_LATENCY-1];
+    logic vsync_pipe [0:RENDER_LATENCY-1];
+    logic de_pipe    [0:RENDER_LATENCY-1];
 
     always_ff @(posedge clk_pix) begin
         if (!rst_pix_n) begin
@@ -295,7 +289,7 @@ module ray_renderer_core_axi (
         end
     endgenerate
 
-    ray_unit #(
+    design1_ray_unit #(
         .W        (W),
         .H        (H),
         .GRID_N   (GRID_N),
@@ -310,7 +304,6 @@ module ray_renderer_core_axi (
         .clk                (clk_pix),
         .rst_n              (rst_pix_n),
         .en                 (1'b1),
-
         .Ox                 (live_Ox),
         .Oy                 (live_Oy),
         .Oz                 (live_Oz),
@@ -323,23 +316,18 @@ module ray_renderer_core_axi (
         .up_x               (live_up_x),
         .up_y               (live_up_y),
         .up_z               (live_up_z),
-
         .sun_dx             (ZERO),
         .sun_dy             (SUN_D),
         .sun_dz             (SUN_D),
-
         .px_in              (active_video ? sx[PX_W-1:0] : '0),
         .py_in              (active_video ? sy[PY_W-1:0] : '0),
         .valid_in           (active_video),
-
         .marcher_bram_addr  (mb_addr),
         .marcher_bram_re    (mb_re),
         .marcher_bram_dout  (mb_dout),
-
         .normal_bram_addr   (nb_addr),
         .normal_bram_re     (nb_re),
         .normal_bram_dout   (nb_dout),
-
         .r_out              (ray_r),
         .g_out              (ray_g),
         .b_out              (ray_b),

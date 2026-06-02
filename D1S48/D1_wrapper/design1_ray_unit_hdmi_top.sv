@@ -22,13 +22,13 @@ module design1_ray_unit_hdmi_top (
     localparam int H              = 480;
     localparam int PX_W           = 10;
     localparam int PY_W           = 9;
-    localparam int RENDER_LATENCY = 78;
+    localparam int RENDER_LATENCY = 206;
 
     localparam int GRID_N  = 64;
     localparam int IDX_W   = 6;
     localparam int ADDR_W  = IDX_W * 2;
 
-    localparam int N_STEPS = 16;
+    localparam int N_STEPS = 48;
     localparam int H_W     = 16;
     localparam int DIR_W   = 16;
     localparam int POS_W   = 16;
@@ -38,7 +38,7 @@ module design1_ray_unit_hdmi_top (
 
     // Camera: close above the -X/-Y side, looking diagonally toward map centre
     // with a 45-degree downward pitch. Values are Q2.13. The height is kept
-    // low enough that the current 16-step marcher reaches the terrain.
+    // low enough that the current 48-step marcher reaches the terrain.
     localparam logic signed [POS_W-1:0] OX = -16'sd2867;  // -0.350
     localparam logic signed [POS_W-1:0] OY = -16'sd2867;  // -0.350
     localparam logic signed [POS_W-1:0] OZ =  16'sd3686;  //  0.450

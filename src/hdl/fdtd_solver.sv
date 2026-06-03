@@ -223,7 +223,7 @@ always_ff @(posedge clk) begin
             ey_we <= write_valid;
             ex_we <= write_valid;
             if (wr_row == 0 || wr_row == TOTAL_ROWS-1) ey_wr_data <= '0;
-            else if (source_valid && wr_cell == source_addr) ey_wr_data <= source_in;
+            else if (source_valid && wr_cell == source_addr) ey_wr_data <= engine_ey_new + source_in;
             else ey_wr_data <= engine_ey_new;
             if (wr_column == 0 || wr_column == COLUMNS-1) ex_wr_data <= '0;
             else ex_wr_data <= engine_ex_new;

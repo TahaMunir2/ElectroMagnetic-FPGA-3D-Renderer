@@ -35,15 +35,28 @@ BRAM 114/140 (81%), LUT 21% / FF 14% / DSP 9%.
    `pp_frame_ready`/`bridge_busy` toggle ⇒ FDTD→bridge chain is live.
 4. HDMI should show an animated 3D terrain of the wave magnitude.
 
-## Tuning knob
-If the terrain looks flat or clipped, adjust `HEIGHT_SHIFT` (default 1 = ÷2) in
-`rtl/integration/s_mag_to_heightmap_bridge.sv` and rebuild — it maps |E|/|S|
-magnitude to terrain height.
+## Source: soft, not hard
+The FDTD source is a **soft source** — the centre cell does `ey <= engine_ey_new
++ source_in` (adds the drive on top of the natural update) rather than
+overwriting it. A hard (overwrite) source acts as a fixed reflector and, under
+continuous free-run, turns the grid into a driven resonant cavity whose energy
+climbs without bound until it saturates. The soft source removes that reflector;
+`tb_energy.sv` shows the field settles to a bounded steady state instead of
+climbing.
+
+## Tuning relief — live, no rebuild
+Terrain height is set at runtime via `height_ctl` (signed −16..+15, GPIO ctrl CH2
+bits [20:16]); the bridge applies it as a bidirectional shift (`>0` amplify,
+`<0` attenuate, `0` pass-through). Because the soft source keeps |E| small, a
+positive value (≈ +2..+4) is usually needed. Tune from Python with
+`set_height(n)` while it runs — no rebuild.
 
 ## Verified in simulation (iverilog, see `sim/`)
 - `tb_bridge.sv` — bridge copies all 4096 cells, correct scaling + readback.
 - `tb_freerun.sv` — solver auto-restarts on `frame_done`; pauses (no field-BRAM
   corruption) while the magnitude scan runs.
+- `tb_energy.sv` — hard vs soft source: hard pins the source cell (reflector),
+  soft settles to a bounded, stable field over 120 free-run iterations.
 
 ## Notes
 - `rtl/renderer/heightmap_bram.sv` is Taha's original read-only mock, kept for

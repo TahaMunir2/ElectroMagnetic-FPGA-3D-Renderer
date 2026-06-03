@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Tue Jun  2 19:02:46 2026" VIVADOVERSION="2023.2">
+<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Wed Jun  3 15:29:36 2026" VIVADOVERSION="2023.2">
 
   <SYSTEMINFO ARCH="zynq" DEVICE="7z020" NAME="fdtd_hdmi_bd" PACKAGE="clg400" SPEEDGRADE="-1"/>
 
@@ -391,6 +391,7 @@
             <CONNECTION INSTANCE="slice_mag_mode" PORT="Din"/>
             <CONNECTION INSTANCE="slice_sample_req" PORT="Din"/>
             <CONNECTION INSTANCE="slice_free_run" PORT="Din"/>
+            <CONNECTION INSTANCE="slice_height_ctl" PORT="Din"/>
           </CONNECTIONS>
         </PORT>
         <PORT DIR="O" LEFT="31" NAME="gpio_io_o" RIGHT="0" SIGIS="undef" SIGNAME="axi_gpio_ctrl_gpio_io_o">
@@ -1884,6 +1885,11 @@
         <PORT CLKFREQUENCY="25000000" DIR="I" NAME="clk" SIGIS="clk" SIGNAME="clk_wiz_0_clk_out1">
           <CONNECTIONS>
             <CONNECTION INSTANCE="clk_wiz_0" PORT="clk_out1"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="4" NAME="height_ctl" RIGHT="0" SIGIS="undef" SIGNAME="slice_height_ctl_Dout">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="slice_height_ctl" PORT="Dout"/>
           </CONNECTIONS>
         </PORT>
         <PORT DIR="O" LEFT="11" NAME="hm_waddr" RIGHT="0" SIGIS="undef" SIGNAME="bridge_0_hm_waddr">
@@ -5623,6 +5629,30 @@
         <PORT DIR="O" LEFT="0" NAME="Dout" RIGHT="0" SIGIS="undef" SIGNAME="slice_free_run_Dout">
           <CONNECTIONS>
             <CONNECTION INSTANCE="fdtd_solver_bd_adapter_0" PORT="free_run"/>
+          </CONNECTIONS>
+        </PORT>
+      </PORTS>
+      <BUSINTERFACES/>
+    </MODULE>
+    <MODULE COREREVISION="3" FULLNAME="/slice_height_ctl" HWVERSION="1.0" INSTANCE="slice_height_ctl" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="xlslice" VLNV="xilinx.com:ip:xlslice:1.0">
+      <DOCUMENTS/>
+      <PARAMETERS>
+        <PARAMETER NAME="DIN_FROM" VALUE="20"/>
+        <PARAMETER NAME="DIN_TO" VALUE="16"/>
+        <PARAMETER NAME="DIN_WIDTH" VALUE="32"/>
+        <PARAMETER NAME="Component_Name" VALUE="fdtd_hdmi_bd_slice_height_ctl_0"/>
+        <PARAMETER NAME="DOUT_WIDTH" VALUE="5"/>
+        <PARAMETER NAME="EDK_IPTYPE" VALUE="PERIPHERAL"/>
+      </PARAMETERS>
+      <PORTS>
+        <PORT DIR="I" LEFT="31" NAME="Din" RIGHT="0" SIGIS="undef" SIGNAME="axi_gpio_ctrl_gpio2_io_o">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_gpio_ctrl" PORT="gpio2_io_o"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="4" NAME="Dout" RIGHT="0" SIGIS="undef" SIGNAME="slice_height_ctl_Dout">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="bridge_0" PORT="height_ctl"/>
           </CONNECTIONS>
         </PORT>
       </PORTS>

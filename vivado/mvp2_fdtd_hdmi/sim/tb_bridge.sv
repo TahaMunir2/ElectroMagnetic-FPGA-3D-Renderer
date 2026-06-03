@@ -11,6 +11,7 @@ module tb_bridge;
 
     logic vblank;
     logic read_sel;
+    logic signed [4:0] height_ctl;
 
     // bridge <-> s_mag port B
     logic [ADDR_W-1:0] s_mag_addrb;
@@ -47,7 +48,7 @@ module tb_bridge;
     s_mag_to_heightmap_bridge #(
         .ADDR_W(ADDR_W), .DATA_W(DATA_W), .GUARD_CYCLES(GUARD), .HEIGHT_SHIFT(SHIFT)
     ) dut (
-        .clk(clk), .rst(rst), .vblank(vblank), .read_sel(read_sel),
+        .clk(clk), .rst(rst), .height_ctl(height_ctl), .vblank(vblank), .read_sel(read_sel),
         .s_mag_addrb(s_mag_addrb), .s_mag_enb(s_mag_enb),
         .s_mag_a_doutb(a_doutb), .s_mag_b_doutb(b_doutb),
         .hm_we(hm_we), .hm_waddr(hm_waddr), .hm_wdata(hm_wdata), .busy(busy));
@@ -75,6 +76,7 @@ module tb_bridge;
 
     initial begin
         rst = 1; vblank = 0; read_sel = 0; writes = 0;
+        height_ctl = -5'sd1;   // -1 => divide by 2 (attenuate path), matches old >>1
         for (i = 0; i < DEPTH; i = i + 1) seen[i] = 1'b0;
         a_ena = 0; a_wea = 0; a_addra = 0; a_dina = 0;
         hm_re = 0; hm_raddr = 0;

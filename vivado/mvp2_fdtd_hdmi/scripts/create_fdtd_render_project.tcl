@@ -420,20 +420,24 @@ make_slice slice_amplitude  31 16 32
 connect_bd_net [get_bd_pins axi_gpio_ctrl/gpio_io_o] [get_bd_pins slice_phase_step/Din] [get_bd_pins slice_amplitude/Din]
 connect_bd_net [get_bd_pins slice_phase_step/Dout] [get_bd_pins cordic_source_adapter_0/phase_step_q313]
 connect_bd_net [get_bd_pins slice_amplitude/Dout]  [get_bd_pins cordic_source_adapter_0/amplitude_q313]
-# CH2: source_addr[11:0], solver_en[12], mag_mode[13], sample_req[14], free_run[15]
+# CH2: source_addr[11:0], solver_en[12], mag_mode[13], sample_req[14], free_run[15],
+#      height_ctl[20:16] (signed 5-bit runtime terrain-height scale)
 make_slice slice_source_addr 11 0  32
 make_slice slice_solver_en   12 12 32
 make_slice slice_mag_mode    13 13 32
 make_slice slice_sample_req  14 14 32
 make_slice slice_free_run    15 15 32
+make_slice slice_height_ctl  20 16 32
 connect_bd_net [get_bd_pins axi_gpio_ctrl/gpio2_io_o] \
     [get_bd_pins slice_source_addr/Din] [get_bd_pins slice_solver_en/Din] \
-    [get_bd_pins slice_mag_mode/Din] [get_bd_pins slice_sample_req/Din] [get_bd_pins slice_free_run/Din]
+    [get_bd_pins slice_mag_mode/Din] [get_bd_pins slice_sample_req/Din] \
+    [get_bd_pins slice_free_run/Din] [get_bd_pins slice_height_ctl/Din]
 connect_bd_net [get_bd_pins slice_source_addr/Dout] [get_bd_pins fdtd_solver_bd_adapter_0/source_addr]
 connect_bd_net [get_bd_pins slice_solver_en/Dout]   [get_bd_pins fdtd_solver_bd_adapter_0/solver_enable]
 connect_bd_net [get_bd_pins slice_free_run/Dout]    [get_bd_pins fdtd_solver_bd_adapter_0/free_run]
 connect_bd_net [get_bd_pins slice_mag_mode/Dout]    [get_bd_pins field_magnitude_bd_adapter_0/mag_mode]
 connect_bd_net [get_bd_pins slice_sample_req/Dout]  [get_bd_pins cordic_source_adapter_0/sample_req]
+connect_bd_net [get_bd_pins slice_height_ctl/Dout]  [get_bd_pins bridge_0/height_ctl]
 
 # ---- axi_gpio_status (M02) ----
 create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_status

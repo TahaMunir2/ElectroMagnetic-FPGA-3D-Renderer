@@ -34,6 +34,11 @@ module s_mag_to_heightmap_bridge #(
     input  logic                     clk,
     input  logic                     rst,        // active-high
 
+    // Runtime height scale (signed): >0 = left-shift (amplify), <0 = right-shift
+    // (attenuate), 0 = pass through. Lets the PS tune terrain height live without
+    // a rebuild. 5-bit signed, range -16..+15.
+    input  logic signed [4:0]        height_ctl,
+
     // Render-side timing
     input  logic                     vblank,     // high during vertical blank
 
@@ -80,16 +85,27 @@ module s_mag_to_heightmap_bridge #(
         s_mag_enb   = (st == S_BURST) && issuing;
     end
 
-    // Magnitude -> height: shift down, saturate to signed range.
-    function automatic logic signed [DATA_W-1:0] scale_height(input logic signed [DATA_W-1:0] m);
-        logic [DATA_W-1:0] mag;
-        logic [DATA_W-1:0] sh;
+    // Magnitude -> height: runtime bidirectional shift + saturate to +max.
+    // s_mag is a non-negative magnitude; treat as unsigned. height_ctl > 0
+    // amplifies (left shift, saturating), < 0 attenuates (right shift).
+    function automatic logic signed [DATA_W-1:0] scale_height(
+            input logic signed [DATA_W-1:0] m,
+            input logic signed [4:0]        ctl);
+        logic [2*DATA_W-1:0] wide;
+        logic [4:0]          amt;
         begin
-            // s_mag is a non-negative magnitude; treat as unsigned then shift.
-            mag = m;
-            sh  = mag >> HEIGHT_SHIFT;
-            // keep top bit clear so the result stays a positive height
-            scale_height = sh[DATA_W-1] ? {1'b0, {(DATA_W-1){1'b1}}} : sh;
+            if (ctl >= 0) begin
+                amt  = ctl;
+                wide = ({{DATA_W{1'b0}}, m}) << amt;          // amplify
+            end else begin
+                amt  = -ctl;
+                wide = {{DATA_W{1'b0}}, (m >> amt)};          // attenuate
+            end
+            // saturate to the positive 16-bit range (top bit kept clear)
+            if (|wide[2*DATA_W-1:DATA_W-1])
+                scale_height = {1'b0, {(DATA_W-1){1'b1}}};
+            else
+                scale_height = wide[DATA_W-1:0];
         end
     endfunction
 
@@ -151,7 +167,7 @@ module s_mag_to_heightmap_bridge #(
                     if (wr_valid_d) begin
                         hm_we    <= 1'b1;
                         hm_waddr <= wr_addr_d;
-                        hm_wdata <= scale_height(front_dout);
+                        hm_wdata <= scale_height(front_dout, height_ctl);
                         if (wr_addr_d == LAST)
                             st <= S_IDLE;       // last cell written -> done
                     end

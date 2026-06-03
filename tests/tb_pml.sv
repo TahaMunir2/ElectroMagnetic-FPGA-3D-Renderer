@@ -50,11 +50,11 @@ module tb_pml;
 
     initial begin
         exp_ca[0]    =  16'sd8192; exp_cb_e[0]  = -16'sd25; exp_cb_bz[0] = -16'sd25;
-        exp_ca[1]    =  16'sd8188; exp_cb_e[1]  = -16'sd25; exp_cb_bz[1] = -16'sd25;
-        exp_ca[2]    =  16'sd8180; exp_cb_e[2]  = -16'sd25; exp_cb_bz[2] = -16'sd25;
-        exp_ca[3]    =  16'sd8168; exp_cb_e[3]  = -16'sd25; exp_cb_bz[3] = -16'sd25;
-        exp_ca[4]    =  16'sd8152; exp_cb_e[4]  = -16'sd25; exp_cb_bz[4] = -16'sd25;
-        exp_ca[5]    =  16'sd8135; exp_cb_e[5]  = -16'sd25; exp_cb_bz[5] = -16'sd25;
+        exp_ca[1]    =  16'sd8191; exp_cb_e[1]  = -16'sd25; exp_cb_bz[1] = -16'sd25;
+        exp_ca[2]    =  16'sd8184; exp_cb_e[2]  = -16'sd25; exp_cb_bz[2] = -16'sd25;
+        exp_ca[3]    =  16'sd8165; exp_cb_e[3]  = -16'sd25; exp_cb_bz[3] = -16'sd25;
+        exp_ca[4]    =  16'sd8128; exp_cb_e[4]  = -16'sd25; exp_cb_bz[4] = -16'sd25;
+        exp_ca[5]    =  16'sd8067; exp_cb_e[5]  = -16'sd25; exp_cb_bz[5] = -16'sd25;
 
         $display("=== tb_pml ===");
 

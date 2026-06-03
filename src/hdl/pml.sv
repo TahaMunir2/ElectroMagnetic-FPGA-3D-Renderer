@@ -17,27 +17,27 @@ module pml #(
                 cb_bz = -16'sd25;
             end
             1: begin
-                ca = 16'sd8188;
+                ca = 16'sd8191;
                 cb_e = -16'sd25;
                 cb_bz = -16'sd25;
             end
             2: begin
-                ca = 16'sd8180;
+                ca = 16'sd8184;
                 cb_e = -16'sd25;
                 cb_bz = -16'sd25;
             end
             3: begin
-                ca = 16'sd8168;
+                ca = 16'sd8165;
                 cb_e = -16'sd25;
                 cb_bz = -16'sd25;
             end
             4: begin
-                ca = 16'sd8152;
+                ca = 16'sd8128;
                 cb_e = -16'sd25;
                 cb_bz = -16'sd25;
             end
             5: begin
-                ca = 16'sd8135;
+                ca = 16'sd8067;
                 cb_e = -16'sd25;
                 cb_bz = -16'sd25;
             end

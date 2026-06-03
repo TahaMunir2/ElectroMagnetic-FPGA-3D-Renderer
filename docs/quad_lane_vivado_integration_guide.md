@@ -140,13 +140,69 @@ controller. This is unchanged in complexity from the MVP3 design.
 
 ---
 
-### 5. Files that did NOT change
+### 5. `src/hdl/pml.sv` — modified
+
+The `ca` attenuation coefficients now follow a cubic ramp (`ca(d) = 8192 − d³`)
+rather than the previous shallower gradient. The `cb_e` and `cb_bz` values are
+unchanged at −25 for all depths.
+
+| depth d | ca (old) | ca (new) |
+|---------|----------|----------|
+| 0 | 8192 | 8192 |
+| 1 | 8188 | 8191 |
+| 2 | 8180 | 8184 |
+| 3 | 8168 | 8165 |
+| 4 | 8152 | 8128 |
+| 5 | 8135 | 8067 |
+
+The cubic profile keeps the interior-facing interface smooth (d=0 still has
+ca=8192, no impedance step) while concentrating absorption near the outer wall
+where reflection risk is already zero (PEC at row 0 / row TOTAL_ROWS−1). At
+Courant=0.003, one-way PML attenuation improves from approximately −48 dB to
+better than −100 dB.
+
+**Vivado action:** Replace `pml.sv` in project sources.
+
+---
+
+### 6. Source address change: 192×192 → 64×64
+
+The hardware block design used `SOURCE_ADDR = 18528` (centre of a 192×192
+grid: 192 × 96 + 96). The quad-lane design uses a 12-bit flat address space
+(64×64 = 4096 cells). If you drive a centre source, update the address to
+`2080` (= 64 × 32 + 32).
+
+`source_addr` is a runtime input port on `top_fdtd_quad_lane`, so no HDL
+rebuild is required — change the value in your AXI GPIO / PS software layer.
+
+---
+
+### 7. `src/hdl/top_fdtd_system.sv` — must be excluded from Vivado sources
+
+`top_fdtd_system.sv` still instantiates `fdtd_solver` with the old interface:
+
+```systemverilog
+fdtd_solver #(
+    .CELLS(CELLS),         // parameter does not exist in new fdtd_solver
+    .CELL_WIDTH(ADDR_WIDTH),
+    .DATA_WIDTH(DATA_WIDTH)
+) u_solver ( ... );
+```
+
+`CELLS` was removed when `fdtd_solver` was refactored for multi-lane. Leaving
+`top_fdtd_system.sv` in the Vivado source set while also importing the new
+`fdtd_solver.sv` will produce an elaboration error. **Remove
+`top_fdtd_system.sv` from Vivado sources** before synthesising the quad-lane
+design. `top_fdtd_quad_lane` replaces it entirely.
+
+---
+
+### 8. Files that did NOT change
 
 These are identical to the MVP3 build. Do not replace them:
 
 - `Ey.sv`, `Ex.sv`, `Bz.sv` — 3-stage pipeline, timing fix already applied
 - `fdtd_engine.sv`
-- `pml.sv`
 - `bram_module.v` — do not touch
 
 ---
@@ -189,14 +245,17 @@ add no timing pressure.
 |---|------|--------|
 | 1 | Add source | `src/hdl/top_fdtd_quad_lane.sv` |
 | 2 | Replace source | `src/hdl/fdtd_solver.sv` |
-| 3 | Set top module | `top_fdtd_quad_lane` (or new wrapper around it) |
-| 4 | Write new wrapper | Replace `top_fdtd_hardware_wrapper.sv` — see section 4 |
-| 5 | Remove or update adapter | `fdtd_solver_bd_adapter.v` — see section 3 |
-| 6 | Remove old BD BRAM IPs | `ey_bram`, `ex_bram`, `bz_bram` IP blocks no longer needed |
-| 7 | Keep constraint | `create_clock -period 10.000` unchanged |
-| 8 | Re-validate | Run *Validate Design* — no critical errors expected |
-| 9 | Synthesise | Check BRAM utilisation: expect 24 BRAM18s |
-| 10 | Implement | WNS should be ≥ 0 at 100 MHz; critical path unchanged from MVP3 |
+| 3 | Replace source | `src/hdl/pml.sv` — cubic ca ramp |
+| 4 | Set top module | `top_fdtd_quad_lane` (or new wrapper around it) |
+| 5 | Write new wrapper | Replace `top_fdtd_hardware_wrapper.sv` — see section 4 |
+| 6 | Update source address | Change `source_addr` from 18528 to 2080 in PS / AXI layer — see section 6 |
+| 7 | Remove source | `src/hdl/top_fdtd_system.sv` — conflicts with new fdtd_solver, see section 7 |
+| 8 | Remove or update adapter | `fdtd_solver_bd_adapter.v` — see section 3 |
+| 9 | Remove old BD BRAM IPs | `ey_bram`, `ex_bram`, `bz_bram` IP blocks no longer needed |
+| 10 | Keep constraint | `create_clock -period 10.000` unchanged |
+| 11 | Re-validate | Run *Validate Design* — no critical errors expected |
+| 12 | Synthesise | Check BRAM utilisation: expect 24 BRAM18s |
+| 13 | Implement | WNS should be ≥ 0 at 100 MHz; critical path unchanged from MVP3 |
 
 ---
 

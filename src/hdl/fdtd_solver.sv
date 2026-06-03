@@ -5,9 +5,9 @@ module fdtd_solver #(
     parameter TOTAL_ROWS = 64,
     parameter ROWS = TOTAL_ROWS / LANES,
     parameter COLUMNS = 64,
-    parameter ROW_OFFSET,
-    parameter FIRST_LANE,
-    parameter LAST_LANE,
+    parameter ROW_OFFSET = 0,
+    parameter FIRST_LANE = 1,
+    parameter LAST_LANE = 1,
     parameter CELL_WIDTH = 6,
     parameter DATA_WIDTH = 16,
     parameter PML_SIZE = 6

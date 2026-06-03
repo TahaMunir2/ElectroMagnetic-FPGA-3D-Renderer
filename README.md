@@ -24,6 +24,18 @@ guidance.
 
 ## Active FPGA Flows
 
+Generate the Design2 HDMI project:
+
+```powershell
+vivado -mode batch -source scripts/create_design2_vivado_project.tcl
+```
+
+Build an existing generated project through bitstream generation:
+
+```powershell
+vivado -mode batch -source scripts/build_vivado_bitstream.tcl -tclargs -project design2/vivado_project_design2/design2_renderer.xpr
+```
+
 Generate the D1S48 timing-only HDMI project:
 
 ```powershell

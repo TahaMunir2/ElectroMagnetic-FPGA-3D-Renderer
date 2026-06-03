@@ -1,1 +1,24 @@
-Design 2 cuts the renderer's BRAM footprint in half — from 20 read ports to 10 (8 marcher + 2 normal) — by running the whole pipeline at half throughput, one pixel every two cycles instead of one per cycle. The marcher achieves this by pairing adjacent march steps so each pair shares a single dual-port heightmap copy, with the two steps reading on alternating clock phases. To make the phases of adjacent steps line up for sharing, each `march_step2` gains one extra pipeline stage (5 instead of 4), and a 1-bit phase counter in `marcher2` muxes each pair's two addresses onto one shared BRAM port. The `normal2` module applies the same trick, spreading its four bilinear-corner reads across two cycles on two ports instead of four, so it needs only one heightmap copy. The shading algorithm is identical to Design 1 — bilinear-interpolated normal and surface height — so the rendered image is visually the same, confirmed by an end-to-end frame diff where Design 2 matched Design 1 to within ±6/255 on only 1.5% of pixels (pure rounding from the folded read scheduling). Because the half-rate stream cannot feed the fixed 1-pixel-per-cycle HDMI scanout directly, Design 2 requires an architectural change at the top level: the renderer core runs on a new 50 MHz clock while HDMI stays at 25 MHz. An asynchronous FIFO crosses RGB pixels from the 50 MHz render domain to the 25 MHz scanout domain, and the renderer self-throttles via the FIFO's `prog_full` flag so it never overruns during blanking intervals. This replaces Design 1's fixed `RENDER_LATENCY` sync-pipe scheme entirely, since the FIFO decouples render latency from scanout timing. The external `ray_unit2` interface is the true reduced 8+2 BRAM-port interface, so the top module's BRAM instantiation drops from 20 blocks to 10, making the saving explicit rather than relying on synthesis pruning. The net result is the same picture at half the BRAM cost, freeing roughly 10 BRAM tiles for heightmap scaling or future spatial parallelism, at the price of one extra clock domain and a CDC FIFO. Design 2 is fully verified in simulation but not yet confirmed on hardware, where FIFO startup behaviour and frame synchronisation should be checked for tearing.
+# Design 2
+
+Design 2 is the folded half-rate version of the renderer. HDMI scanout stays at
+25 MHz, the renderer core runs at 50 MHz, and the top feeds one real pixel into
+`ray_unit2` every two core cycles.
+
+The current hardware target uses `N_STEPS=48`. Adjacent march steps share one
+BRAM read port, so the marcher uses `N_STEPS/2 = 24` heightmap BRAM copies
+instead of 48. `normal2` uses two more BRAM ports/copies for bilinear normal
+reads. The renderer core therefore uses 26 heightmap BRAM copies, plus the HDMI
+FIFO BRAM.
+
+Latency:
+
+- `ray_gen`: 4 cycles
+- `marcher2`: 240 cycles, from 48 steps at 5 cycles per step
+- `normal2`: 6 cycles
+- `shader`: 5 cycles
+- Total render latency: 255 renderer-core cycles
+
+The top-level pixel feeder must only advance `(x,y)` when it asserts the
+half-rate `gen_valid` strobe. Advancing every 50 MHz cycle corrupts the folded
+pipeline input stream and can produce an all-sky frame even when HDMI timing is
+valid.

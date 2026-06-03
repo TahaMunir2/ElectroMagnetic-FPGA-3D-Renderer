@@ -18,7 +18,7 @@
 //  Outputs:
 //      - hit status, hit indices, hit height, Px_hit, Py_hit
 //      - step_count
-//      - N_STEPS/2 shared BRAM port outputs (8 instead of 16 for N_STEPS=16)
+//      - N_STEPS/2 shared BRAM port outputs (24 instead of 48 for N_STEPS=48)
 //
 //  Pipeline latency: 5 * N_STEPS cycles (was 4 * N_STEPS).
 //  Throughput: 1 pixel / 2 cycles.
@@ -45,7 +45,7 @@ module marcher2 #(
     parameter int PY_W       = 10,
 
     // ----- Number of unrolled march steps (must be EVEN for pairing) -----
-    parameter int N_STEPS    = 16,
+    parameter int N_STEPS    = 48,
     parameter int STEP_W     = $clog2(N_STEPS + 1),
 
     // ----- Inert knobs (matched against marcher's interface) -----

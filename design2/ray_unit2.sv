@@ -15,7 +15,7 @@
 //                 ▼
 //          ┌──────────────┐
 //          │   marcher    │  marches N_STEPS steps through the heightmap
-//          │              │  16 BRAM ports
+//          │              │  24 shared BRAM ports
 //          └──────┬───────┘
 //                 │ (status, ix_hit, iy_hit, h_hit, step_count, px, py, valid)
 //                 ▼
@@ -35,7 +35,7 @@
 //  This wrapper exposes:
 //      - the input side of ray_gen
 //      - the output side of shader
-//      - all 20 BRAM ports (16 from marcher + 4 from normal)
+//      - 24 shared marcher BRAM ports plus 2 normal BRAM ports
 //
 //  No emit module yet (that will go after shader for AXI-Stream handshake).
 //  No top-level AXI-Lite interface (camera params come in as discrete ports
@@ -43,15 +43,15 @@
 //
 //  Total pipeline latency (Design 2):
 //      ray_gen  :  4 cycles
-//      marcher2 : 80 cycles (16 march_step2 * 5 stages)
+//      marcher2 : 240 cycles (48 march_step2 * 5 stages)
 //      normal2  :  6 cycles
 //      shader   :  5 cycles
-//      TOTAL    : 95 cycles
+//      TOTAL    : 255 cycles
 //
 //  Throughput: 1 pixel / 2 cycles  (half rate)
-//  BRAM cost  : 8 marcher + 2 normal = 10 BRAMs total
+//  BRAM cost  : 24 marcher + 2 normal = 26 BRAMs total
 //
-//  Throughput (after fill): 1 pixel/cycle.
+//  Throughput (after fill): 1 pixel / 2 cycles.
 // ============================================================================
 
 module ray_unit2 #(
@@ -85,7 +85,7 @@ module ray_unit2 #(
     parameter int H_F         = H_W - 1 - H_I,
 
     // ----- Marcher depth -----
-    parameter int N_STEPS     = 16,
+    parameter int N_STEPS     = 48,
     parameter int STEP_W      = $clog2(N_STEPS + 1),
 
     // ----- Pixel coord widths -----

@@ -5,9 +5,9 @@
 //     produces 1 pixel every 2 core cycles  => 25 Mpix/s average.
 //   - An asynchronous FIFO crosses from the 50 MHz render domain to the
 //     25 MHz pixel/scanout domain.
-//   - The HDMI side pops exactly one pixel per active_video cycle.
-//   - The renderer is throttled by FIFO fill (valid_in gated on !almost_full)
-//     so it does not overrun during blanking.
+//   - The core-domain pixel generator includes HDMI blanking, so the renderer
+//     produces active pixels at the same average rate that HDMI consumes them.
+//   - The FIFO bridges render latency and the 50 MHz / 25 MHz clock phase.
 //
 // Required Vivado IP:
 //   - clk_wiz_0:
@@ -30,6 +30,14 @@ module ray_unit_hdmi_top_d2 (
 
     localparam int W       = 640;
     localparam int H       = 480;
+    localparam int H_FRONT = 16;
+    localparam int H_SYNC  = 96;
+    localparam int H_BACK  = 48;
+    localparam int H_TOTAL = W + H_FRONT + H_SYNC + H_BACK;
+    localparam int V_FRONT = 10;
+    localparam int V_SYNC  = 2;
+    localparam int V_BACK  = 33;
+    localparam int V_TOTAL = H + V_FRONT + V_SYNC + V_BACK;
     localparam int PX_W    = 10;
     localparam int PY_W    = 9;
 
@@ -37,10 +45,12 @@ module ray_unit_hdmi_top_d2 (
     localparam int IDX_W   = 6;
     localparam int ADDR_W  = IDX_W * 2;
 
-    localparam int N_STEPS = 16;
+    localparam int N_STEPS = 48;
     localparam int H_W     = 16;
     localparam int DIR_W   = 16;
     localparam int POS_W   = 16;
+    localparam int RENDER_LATENCY_CORE = 4 + 5*N_STEPS + 6 + 5;
+    localparam int RENDER_LATENCY_PIX  = (RENDER_LATENCY_CORE + 1) / 2;
 
     localparam logic signed [DIR_W-1:0] ZERO = 16'sd0;
 
@@ -85,33 +95,40 @@ module ray_unit_hdmi_top_d2 (
     //  RENDER DOMAIN  (clk_core, 50 MHz)
     // ===============================================================
 
-    // Free-running pixel coordinate counter.  Advances only when the
-    // renderer accepts a pixel (i.e. when not throttled by the FIFO).
+    // Core-domain copy of the 640x480 timing. It advances once per pixel
+    // period on the 50 MHz renderer clock and feeds only active pixels.
+    logic            core_pix_phase;
+    logic [9:0]      core_sx;
+    logic [9:0]      core_sy;
+    logic            core_active;
     logic [PX_W-1:0] gen_x;
     logic [PY_W-1:0] gen_y;
-    logic            gen_valid;     // we want to push a new pixel this cycle
-    logic            fifo_afull;    // from FIFO (render-domain)
-    logic            core_en;
+    logic            gen_valid;     // one-cycle pixel feed strobe
 
-    // Throttle: only feed a new pixel when the FIFO can take the result.
-    assign core_en   = ~fifo_afull;
-    assign gen_valid = core_en;
+    assign core_active = (core_sx < W) && (core_sy < H);
+    assign gen_x       = core_sx[PX_W-1:0];
+    assign gen_y       = core_sy[PY_W-1:0];
+    assign gen_valid   = (core_pix_phase == 1'b0) && core_active;
 
     always_ff @(posedge clk_core) begin
         if (!rst_core_n) begin
-            gen_x <= '0;
-            gen_y <= '0;
-        end else if (core_en) begin
-            if (gen_x == W-1) begin
-                gen_x <= '0;
-                gen_y <= (gen_y == H-1) ? '0 : gen_y + 1'b1;
-            end else begin
-                gen_x <= gen_x + 1'b1;
+            core_pix_phase <= 1'b0;
+            core_sx        <= '0;
+            core_sy        <= '0;
+        end else begin
+            core_pix_phase <= ~core_pix_phase;
+            if (core_pix_phase == 1'b0) begin
+                if (core_sx == H_TOTAL-1) begin
+                    core_sx <= '0;
+                    core_sy <= (core_sy == V_TOTAL-1) ? '0 : core_sy + 1'b1;
+                end else begin
+                    core_sx <= core_sx + 1'b1;
+                end
             end
         end
     end
 
-    // Heightmap BRAMs - 8 marcher + 2 normal, clocked on clk_core.
+    // Heightmap BRAMs - 24 marcher + 2 normal, clocked on clk_core.
     logic [ADDR_W-1:0]     mb_addr [N_STEPS/2];
     logic                  mb_re   [N_STEPS/2];
     logic signed [H_W-1:0] mb_dout [N_STEPS/2];
@@ -140,7 +157,7 @@ module ray_unit_hdmi_top_d2 (
         .W(W), .H(H), .GRID_N(GRID_N), .N_STEPS(N_STEPS),
         .H_W(H_W), .H_I(2), .DIR_W(DIR_W), .DIR_I(2), .POS_W(POS_W), .POS_I(2)
     ) u_ray_unit (
-        .clk(clk_core), .rst_n(rst_core_n), .en(core_en),
+        .clk(clk_core), .rst_n(rst_core_n), .en(1'b1),
         .Ox(OX), .Oy(OY), .Oz(OZ),
         .fwd_x(FWD_X), .fwd_y(FWD_Y), .fwd_z(FWD_Z),
         .right_x(RIGHT_X), .right_y(RIGHT_Y), .right_z(RIGHT_Z),
@@ -155,13 +172,12 @@ module ray_unit_hdmi_top_d2 (
 
     // ===============================================================
     //  ASYNC FIFO  (write: clk_core / read: clk_pix)
-    //  Width = 24 (RGB).  Depth 1024 (>1 line of slack).
-    //  Throttle via prog_full (asserts at PROG_FULL_THRESH).
+    //  Width = 24 (RGB).  Depth 1024 is enough for latency/phase buffering
+    //  because the producer now observes blanking and matches scanout rate.
     // ===============================================================
     logic        fifo_wr_en;
     logic [23:0] fifo_din;
     logic        fifo_full;
-    logic        fifo_prog_full;
     logic        fifo_rd_en;
     logic [23:0] fifo_dout;
     logic        fifo_empty;
@@ -172,9 +188,6 @@ module ray_unit_hdmi_top_d2 (
     assign fifo_wr_en = ray_valid & ~fifo_full & ~wr_rst_busy;
     assign fifo_din   = {ray_r, ray_g, ray_b};
 
-    // Throttle the renderer when the FIFO is getting full, or during reset.
-    assign fifo_afull = fifo_prog_full | wr_rst_busy;
-
     xpm_fifo_async #(
         .FIFO_MEMORY_TYPE  ("block"),
         .FIFO_WRITE_DEPTH  (1024),
@@ -183,7 +196,7 @@ module ray_unit_hdmi_top_d2 (
         .READ_MODE         ("fwft"),
         .FIFO_READ_LATENCY (0),
         .PROG_FULL_THRESH  (768),
-        .USE_ADV_FEATURES  ("0002"),  // bit[1] = prog_full enable
+        .USE_ADV_FEATURES  ("0000"),
         .CDC_SYNC_STAGES   (2),
         .RELATED_CLOCKS    (0)
     ) u_fifo (
@@ -192,7 +205,7 @@ module ray_unit_hdmi_top_d2 (
         .wr_en         (fifo_wr_en),
         .din           (fifo_din),
         .full          (fifo_full),
-        .prog_full     (fifo_prog_full),
+        .prog_full     (),
         .wr_rst_busy   (wr_rst_busy),
         .rd_clk        (clk_pix),
         .rd_en         (fifo_rd_en),
@@ -218,24 +231,46 @@ module ray_unit_hdmi_top_d2 (
         .active_video(active_video)
     );
 
-    // Pop one pixel per active cycle (once read side is out of reset).
-    assign fifo_rd_en = active_video & ~fifo_empty & ~rd_rst_busy;
-
     logic       hdmi_de;
     logic       hdmi_hsync, hdmi_vsync;
     logic [7:0] hdmi_r, hdmi_g, hdmi_b;
+    logic [RENDER_LATENCY_PIX-1:0] hsync_pipe;
+    logic [RENDER_LATENCY_PIX-1:0] vsync_pipe;
+    logic [RENDER_LATENCY_PIX-1:0] de_pipe;
 
-    // sync signals need to align with FIFO read latency (FWFT = 0 extra
-    // cycles for data, but register sync once to match the rd_en->valid path)
+    assign fifo_rd_en = de_pipe[RENDER_LATENCY_PIX-1] & ~fifo_empty & ~rd_rst_busy;
+
     always_ff @(posedge clk_pix) begin
-        hdmi_hsync <= hsync;
-        hdmi_vsync <= vsync;
-        hdmi_de    <= active_video & ~fifo_empty & ~rd_rst_busy;
-    end
+        if (!rst_pix_n) begin
+            hsync_pipe <= '1;
+            vsync_pipe <= '1;
+            de_pipe    <= '0;
+            hdmi_hsync <= 1'b1;
+            hdmi_vsync <= 1'b1;
+            hdmi_de    <= 1'b0;
+            hdmi_r     <= 8'd0;
+            hdmi_g     <= 8'd0;
+            hdmi_b     <= 8'd0;
+        end else begin
+            hsync_pipe <= {hsync_pipe[RENDER_LATENCY_PIX-2:0], hsync};
+            vsync_pipe <= {vsync_pipe[RENDER_LATENCY_PIX-2:0], vsync};
+            de_pipe    <= {de_pipe[RENDER_LATENCY_PIX-2:0], active_video};
 
-    assign hdmi_r = hdmi_de ? fifo_dout[23:16] : 8'd0;
-    assign hdmi_g = hdmi_de ? fifo_dout[15:8]  : 8'd0;
-    assign hdmi_b = hdmi_de ? fifo_dout[7:0]   : 8'd0;
+            hdmi_hsync <= hsync_pipe[RENDER_LATENCY_PIX-1];
+            hdmi_vsync <= vsync_pipe[RENDER_LATENCY_PIX-1];
+            hdmi_de    <= fifo_rd_en;
+
+            if (fifo_rd_en) begin
+                hdmi_r <= fifo_dout[23:16];
+                hdmi_g <= fifo_dout[15:8];
+                hdmi_b <= fifo_dout[7:0];
+            end else begin
+                hdmi_r <= 8'd0;
+                hdmi_g <= 8'd0;
+                hdmi_b <= 8'd0;
+            end
+        end
+    end
 
     rgb2dvi_0 u_rgb2dvi (
         .TMDS_Clk_p  (hdmi_tx_clk_p),

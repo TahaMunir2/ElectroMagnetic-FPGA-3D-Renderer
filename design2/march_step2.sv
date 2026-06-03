@@ -247,18 +247,22 @@ module march_step2 #(
             v_B    <= v_A;
 
             // Status update for this stage:
+            //   Bubble cycle (v_A=0) -> pass status through unchanged.
             //   Frozen ray -> hold status.
             //   Marching ray that just walked off -> OFF_GRID.
             //   Otherwise still MARCHING.
-            if (stat_A != ST_MARCHING)
+            if (!v_A)
+                stat_B <= stat_A;
+            else if (stat_A != ST_MARCHING)
                 stat_B <= stat_A;
             else if (offgrid_B)
                 stat_B <= ST_OFFGRID;
             else
                 stat_B <= ST_MARCHING;
 
-            // Capture the indices we just queried (used by stage D if HIT)
-            if (stat_A == ST_MARCHING && !offgrid_B) begin
+            // Capture the indices we just queried (used by stage D if HIT).
+            // Bubble cycles must NOT capture: their Px_A/ix_B are stale.
+            if (v_A && stat_A == ST_MARCHING && !offgrid_B) begin
                 ix_hit_B <= ix_B;
                 iy_hit_B <= iy_B;
                 Px_hit_B <= Px_A;
@@ -273,8 +277,10 @@ module march_step2 #(
             // Carry the existing h_hit (will be overwritten in stage D if HIT)
             h_hit_B <= h_hit_A;
 
-            // Step counter increments while marching
-            if (stat_A == ST_MARCHING)
+            // Step counter increments only on real marching pixels.
+            // Bubbles must NOT increment, otherwise step_count gets corrupted
+            // along the entire pipeline.
+            if (v_A && stat_A == ST_MARCHING)
                 step_count_B <= step_count_A + 1'b1;
             else
                 step_count_B <= step_count_A;
@@ -385,7 +391,7 @@ module march_step2 #(
             step_count_D <= step_count_C;
             v_D          <= v_C;
 
-            if (stat_C == ST_MARCHING && crossed_D) begin
+            if (v_C && stat_C == ST_MARCHING && crossed_D) begin
                 stat_D   <= ST_HIT;
                 h_hit_D  <= h_bram_C;
                 ix_hit_D <= ix_hit_C;
@@ -401,7 +407,8 @@ module march_step2 #(
                 Py_hit_D <= Py_hit_C;
             end
 
-            if (stat_C == ST_MARCHING)
+            // prev_below only tracks real pixels. Bubble cycles must not pollute it.
+            if (v_C && stat_C == ST_MARCHING)
                 prev_D <= below_D;
             else
                 prev_D <= prev_C;

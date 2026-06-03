@@ -10,8 +10,11 @@ source control. Vivado run products and local tool output are ignored.
 - `design1/`, `design2/`, `design3/`, `design4/` - renderer design variants.
 - `D1S48/` - 48-step copy of Design 1. Generated Vivado projects inside this
   directory are ignored.
+- `D1S32/` - 32-step copy of Design 1. Generated Vivado projects inside this
+  directory are ignored.
 - `wrapper/` - PYNQ-Z1 HDMI and AXI wrappers for the main renderer path.
 - `D1S48/D1_wrapper/` - PYNQ-Z1 HDMI and AXI wrappers for the D1S48 renderer.
+- `D1S32/D1_wrapper/` - PYNQ-Z1 HDMI and AXI wrappers for the D1S32 renderer.
 - `scripts/` - Vivado Tcl project generators and PYNQ-side Python helpers.
 - `notebooks/` - Jupyter notebooks for PYNQ board debugging.
 - `vivado_project/` - checked-in Vivado project entry point and selected IP
@@ -31,10 +34,11 @@ Do not commit normal Vivado run output:
 - `*.wdb`, `*.wcfg`, `*.vcd`, `*.vvp`
 - `*.cache`, `*.gen`, `*.hw`, `*.ip_user_files`, `*.runs`, `*.sim`
 
-For the D1S48 work, generated Vivado project directories are intentionally
+For the D1S variants, generated Vivado project directories are intentionally
 ignored:
 
 - `D1S48/vivado_project_*/`
+- `D1S32/vivado_project_*/`
 
 ## Commit Guidance
 

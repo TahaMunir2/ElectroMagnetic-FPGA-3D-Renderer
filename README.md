@@ -9,8 +9,10 @@ renderer debugging.
 - `src/` - baseline HDL, Python references, and module-level testbenches.
 - `design1/` ... `design4/` - renderer design variants.
 - `D1S48/` - 48-step Design 1 renderer variant.
+- `D1S32/` - 32-step Design 1 renderer variant.
 - `wrapper/` - PYNQ-Z1 HDMI/AXI wrappers for the main renderer.
 - `D1S48/D1_wrapper/` - PYNQ-Z1 HDMI/AXI wrappers for D1S48.
+- `D1S32/D1_wrapper/` - PYNQ-Z1 HDMI/AXI wrappers for D1S32.
 - `scripts/` - Vivado Tcl generators and PYNQ-side camera helper code.
 - `notebooks/` - PYNQ Jupyter debugging notebooks.
 - `docs/` - design notes, setup guides, equations, and repo guidance.
@@ -32,6 +34,18 @@ Generate the D1S48 block-design project with PS camera control:
 
 ```powershell
 vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl
+```
+
+Generate the D1S32 timing-only HDMI project:
+
+```powershell
+vivado -mode batch -source scripts/create_d1s32_vivado_project.tcl
+```
+
+Generate the D1S32 block-design project with PS camera control:
+
+```powershell
+vivado -mode batch -source scripts/create_d1s32_camera_bd_project.tcl
 ```
 
 The camera-control AXI block is assigned to `0x40000000`.

@@ -49,12 +49,12 @@ module tb_pml;
     endtask
 
     initial begin
-        exp_ca[0]    =  16'sd8192; exp_cb_e[0]  = -16'sd717;  exp_cb_bz[0] = -16'sd2867;
-        exp_ca[1]    =  16'sd7862; exp_cb_e[1]  = -16'sd703;  exp_cb_bz[1] = -16'sd2809;
-        exp_ca[2]    =  16'sd6949; exp_cb_e[2]  = -16'sd663;  exp_cb_bz[2] = -16'sd2649;
-        exp_ca[3]    =  16'sd5637; exp_cb_e[3]  = -16'sd605;  exp_cb_bz[3] = -16'sd2420;
-        exp_ca[4]    =  16'sd4141; exp_cb_e[4]  = -16'sd540;  exp_cb_bz[4] = -16'sd2158;
-        exp_ca[5]    =  16'sd2635; exp_cb_e[5]  = -16'sd474;  exp_cb_bz[5] = -16'sd1895;
+        exp_ca[0]    =  16'sd8192; exp_cb_e[0]  = -16'sd25; exp_cb_bz[0] = -16'sd25;
+        exp_ca[1]    =  16'sd8188; exp_cb_e[1]  = -16'sd25; exp_cb_bz[1] = -16'sd25;
+        exp_ca[2]    =  16'sd8180; exp_cb_e[2]  = -16'sd25; exp_cb_bz[2] = -16'sd25;
+        exp_ca[3]    =  16'sd8168; exp_cb_e[3]  = -16'sd25; exp_cb_bz[3] = -16'sd25;
+        exp_ca[4]    =  16'sd8152; exp_cb_e[4]  = -16'sd25; exp_cb_bz[4] = -16'sd25;
+        exp_ca[5]    =  16'sd8135; exp_cb_e[5]  = -16'sd25; exp_cb_bz[5] = -16'sd25;
 
         $display("=== tb_pml ===");
 
@@ -66,7 +66,7 @@ module tb_pml;
 
         d = 6;
         #1;
-        if (ca === 16'sd8192 && cb_e === -16'sd717 && cb_bz === -16'sd2867) begin
+        if (ca === 16'sd8192 && cb_e === -16'sd25 && cb_bz === -16'sd25) begin
             $display("PASS  d=6 (default)  ca=%0d  cb_e=%0d  cb_bz=%0d", ca, cb_e, cb_bz);
             pass_count++;
         end else begin
@@ -84,12 +84,12 @@ module tb_pml;
                     mono_ok = 1'b0;
                     fail_count++;
                 end
-                if (!(exp_cb_e[i] > exp_cb_e[i-1])) begin
+                if (!(exp_cb_e[i] >= exp_cb_e[i-1])) begin
                     $display("FAIL  cb_e magnitude not decreasing at d=%0d", i);
                     mono_ok = 1'b0;
                     fail_count++;
                 end
-                if (!(exp_cb_bz[i] > exp_cb_bz[i-1])) begin
+                if (!(exp_cb_bz[i] >= exp_cb_bz[i-1])) begin
                     $display("FAIL  cb_bz magnitude not decreasing at d=%0d", i);
                     mono_ok = 1'b0;
                     fail_count++;

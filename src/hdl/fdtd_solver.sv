@@ -1,7 +1,13 @@
 `timescale 1ns/1ps
 
 module fdtd_solver #(
-    parameter CELLS = 64,
+    parameter LANES = 4,
+    parameter TOTAL_ROWS = 64,
+    parameter ROWS = TOTAL_ROWS / LANES,
+    parameter COLUMNS = 64,
+    parameter ROW_OFFSET,
+    parameter FIRST_LANE,
+    parameter LAST_LANE,
     parameter CELL_WIDTH = 6,
     parameter DATA_WIDTH = 16,
     parameter PML_SIZE = 6
@@ -31,7 +37,10 @@ module fdtd_solver #(
     output logic [2*CELL_WIDTH-1:0] bz_adj_rd_addr,
     input  wire  [DATA_WIDTH-1:0]   bz_adj_dout,
     output logic [2*CELL_WIDTH-1:0] ey_adj_rd_addr,
-    input  wire  [DATA_WIDTH-1:0]   ey_adj_dout
+    input  wire  [DATA_WIDTH-1:0]   ey_adj_dout,
+    output logic [CELL_WIDTH-1:0]   current_row,
+    output logic [CELL_WIDTH-1:0]   current_col,
+    output logic                    e_phase
 );
 
     logic signed [DATA_WIDTH-1:0] engine_ey_old;
@@ -47,13 +56,16 @@ module fdtd_solver #(
     logic signed [DATA_WIDTH-1:0] prev_bz;
     logic signed [DATA_WIDTH-1:0] prev_ey;
     logic signed [DATA_WIDTH-1:0] prev_ex;
-    logic        [2*CELL_WIDTH+1:0] counter;
-    logic        [2*CELL_WIDTH+1:0] phase_addr;
-    logic        [2*CELL_WIDTH-1:0] cell_addr;
-    logic        [2*CELL_WIDTH-1:0] wr_cell;
-    logic                           write_valid;
-    localparam logic [2*CELL_WIDTH+1:0] GRID_SIZE     = CELLS*CELLS;
-    localparam logic [2*CELL_WIDTH+1:0] TWO_GRID_SIZE = 2*GRID_SIZE;
+    localparam GRID_SIZE     = ROWS * COLUMNS;
+    localparam TWO_GRID_SIZE = 2 * GRID_SIZE;
+    localparam ADDR_BITS     = $clog2(GRID_SIZE) + 1;
+    localparam CTR_BITS      = $clog2(TWO_GRID_SIZE) + 1;
+
+    logic [CTR_BITS-1:0]  counter;
+    logic [CTR_BITS-1:0]  phase_addr;
+    logic [ADDR_BITS-1:0] cell_addr;
+    logic [ADDR_BITS-1:0] wr_cell;
+    logic                 write_valid;
     logic        [CELL_WIDTH-1:0] row;
     logic        [CELL_WIDTH-1:0] column;
     logic        [CELL_WIDTH-1:0] wr_row;
@@ -131,12 +143,15 @@ always_comb begin
     end
 
     cell_addr   = phase_addr;
-    row         = cell_addr / CELLS;
-    column      = cell_addr - (row * CELLS);
+    row         = cell_addr / COLUMNS;
+    column      = cell_addr - (row * COLUMNS);
+    current_row = row;
+    current_col = column;
+    e_phase     = (counter >= GRID_SIZE);
     write_valid = (cell_addr >= 4);
     wr_cell     = write_valid ? (cell_addr - 3'd4) : '0;
-    wr_row      = wr_cell / CELLS;
-    wr_column   = wr_cell - (wr_row * CELLS);
+    wr_row      = (wr_cell / COLUMNS) + ROW_OFFSET;
+    wr_column   = wr_cell - (wr_cell / COLUMNS) * COLUMNS;
 
     bz_adj_rd_addr    = '0;
     ey_adj_rd_addr    = '0;
@@ -149,11 +164,11 @@ always_comb begin
     engine_bz_left_ex = prev_bz;
 
     if (wr_row < PML_SIZE) d_ey = PML_SIZE - 1 - wr_row;
-    else if (wr_row >= CELLS - PML_SIZE) d_ey = wr_row - (CELLS - PML_SIZE);
+    else if (wr_row >= TOTAL_ROWS - PML_SIZE) d_ey = wr_row - (TOTAL_ROWS - PML_SIZE);
     else d_ey = 0;
 
     if (wr_column < PML_SIZE) d_ex = PML_SIZE - 1 - wr_column;
-    else if (wr_column >= CELLS - PML_SIZE) d_ex = wr_column - (CELLS - PML_SIZE);
+    else if (wr_column >= COLUMNS - PML_SIZE) d_ex = wr_column - (COLUMNS - PML_SIZE);
     else d_ex = 0;
 
     d_bz = (d_ey > d_ex) ? d_ey : d_ex;
@@ -162,18 +177,18 @@ always_comb begin
         ey_rd_addr = cell_addr;
         ex_rd_addr = cell_addr;
         bz_rd_addr = cell_addr;
-        if (row != 0) begin
-            bz_adj_rd_addr    = cell_addr - CELLS;
+        if (row != 0 || !FIRST_LANE) begin
+            bz_adj_rd_addr    = cell_addr - COLUMNS;
             engine_bz_left_ey = bz_adj_dout;
         end
     end else begin
         bz_rd_addr = cell_addr;
         ey_rd_addr = cell_addr;
-        if (column != CELLS-1) begin
+        if (column != COLUMNS-1) begin
             ex_rd_addr = cell_addr + 1'b1;
         end
-        if (row != CELLS-1) begin
-            ey_adj_rd_addr  = cell_addr + CELLS;
+        if (row != ROWS-1 || !LAST_LANE) begin
+            ey_adj_rd_addr  = cell_addr + COLUMNS;
             engine_ey_right = ey_adj_dout;
         end
         engine_ey_left = ey_rd_dout;
@@ -207,10 +222,10 @@ always_ff @(posedge clk) begin
         if (counter < GRID_SIZE) begin
             ey_we <= write_valid;
             ex_we <= write_valid;
-            if (wr_row == 0 || wr_row == CELLS-1) ey_wr_data <= '0;
+            if (wr_row == 0 || wr_row == TOTAL_ROWS-1) ey_wr_data <= '0;
             else if (source_valid && wr_cell == source_addr) ey_wr_data <= source_in;
             else ey_wr_data <= engine_ey_new;
-            if (wr_column == 0 || wr_column == CELLS-1) ex_wr_data <= '0;
+            if (wr_column == 0 || wr_column == COLUMNS-1) ex_wr_data <= '0;
             else ex_wr_data <= engine_ex_new;
         end else begin
             bz_we      <= write_valid;

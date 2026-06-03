@@ -8,7 +8,8 @@ module field_magnitude_bd_adapter #(
     input  wire clk,
     input  wire rst,
     input  wire start,
-    input  wire mag_mode,
+    // 0 = |E| (rectified magnitude), 1 = |S| (Poynting), 2 = raw signed Ey (wave)
+    input  wire [1:0] mag_mode,
 
     output wire busy,
     output wire done,
@@ -87,7 +88,7 @@ module field_magnitude_bd_adapter #(
     reg                    mag_we;
     reg                    mag_done_reg;
     reg                    mag_done_pending;
-    reg                    mag_mode_latched;
+    reg [1:0]              mag_mode_latched;
     reg                    start_d;
     reg                    issuing_reads;
     reg                    read_valid_d;
@@ -105,6 +106,7 @@ module field_magnitude_bd_adapter #(
     reg [2*CELL_WIDTH-1:0] stage2_addr;
     reg [DATA_WIDTH-1:0]   stage2_e_mag;
     reg [DATA_WIDTH-1:0]   stage2_bz_abs;
+    reg signed [DATA_WIDTH-1:0] stage2_ey_raw;   // raw signed Ey for wave mode
 
     reg                    stage3_valid;
     reg [2*CELL_WIDTH-1:0] stage3_addr;
@@ -183,7 +185,7 @@ module field_magnitude_bd_adapter #(
             mag_we           <= 1'b0;
             mag_done_reg     <= 1'b0;
             mag_done_pending <= 1'b0;
-            mag_mode_latched <= 1'b0;
+            mag_mode_latched <= 2'b0;
             issuing_reads    <= 1'b0;
             read_valid_d     <= 1'b0;
             read_addr_d      <= {2*CELL_WIDTH{1'b0}};
@@ -196,6 +198,7 @@ module field_magnitude_bd_adapter #(
             stage2_addr      <= {2*CELL_WIDTH{1'b0}};
             stage2_e_mag     <= {DATA_WIDTH{1'b0}};
             stage2_bz_abs    <= {DATA_WIDTH{1'b0}};
+            stage2_ey_raw    <= {DATA_WIDTH{1'b0}};
             stage3_valid     <= 1'b0;
             stage3_addr      <= {2*CELL_WIDTH{1'b0}};
             stage3_result    <= {DATA_WIDTH{1'b0}};
@@ -232,14 +235,17 @@ module field_magnitude_bd_adapter #(
 
                 stage3_valid  <= stage2_valid;
                 stage3_addr   <= stage2_addr;
-                stage3_result <= mag_mode_latched ?
-                    s_mag_from_e_bz(stage2_e_mag, stage2_bz_abs) :
-                    stage2_e_mag;
+                case (mag_mode_latched)
+                    2'd1:    stage3_result <= s_mag_from_e_bz(stage2_e_mag, stage2_bz_abs); // |S|
+                    2'd2:    stage3_result <= stage2_ey_raw;                                // raw signed Ey
+                    default: stage3_result <= stage2_e_mag;                                 // |E|
+                endcase
 
                 stage2_valid  <= stage1_valid;
                 stage2_addr   <= stage1_addr;
                 stage2_e_mag  <= e_mag_from_fields(stage1_ex, stage1_ey);
                 stage2_bz_abs <= abs_unsigned(stage1_bz);
+                stage2_ey_raw <= stage1_ey;
 
                 stage1_valid <= read_valid_d;
                 stage1_addr  <= read_addr_d;

@@ -44,6 +44,16 @@ climbs without bound until it saturates. The soft source removes that reflector;
 `tb_energy.sv` shows the field settles to a bounded steady state instead of
 climbing.
 
+## Display modes (runtime, `mag_mode`)
+`mag_mode` (2-bit, GPIO ctrl CH2 bits {21,13}) selects what gets written to the
+heightmap:
+- `0` = `|E|` rectified magnitude (energy view; clean dome, source spike).
+- `1` = `|S|` Poynting (`|E|·|Bz|`) — wider dynamic range, spikier; use a smaller
+  `height_ctl` (0 or negative) for it.
+- `2` = raw signed `Ey` — smooth hills *and* valleys around a flat plane (the
+  "water ripple" wave view, no rectification cusps). The bridge scales it with a
+  sign-preserving shift.
+
 ## Tuning relief — live, no rebuild
 Terrain height is set at runtime via `height_ctl` (signed −16..+15, GPIO ctrl CH2
 bits [20:16]); the bridge applies it as a bidirectional shift (`>0` amplify,

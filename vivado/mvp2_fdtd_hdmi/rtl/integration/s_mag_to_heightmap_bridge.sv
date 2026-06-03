@@ -85,27 +85,30 @@ module s_mag_to_heightmap_bridge #(
         s_mag_enb   = (st == S_BURST) && issuing;
     end
 
-    // Magnitude -> height: runtime bidirectional shift + saturate to +max.
-    // s_mag is a non-negative magnitude; treat as unsigned. height_ctl > 0
-    // amplifies (left shift, saturating), < 0 attenuates (right shift).
+    // Sign-preserving runtime scale.  height_ctl > 0 amplifies (arithmetic left
+    // shift), < 0 attenuates (arithmetic right shift), 0 = pass-through.
+    // Works for both data kinds the field-magnitude unit produces:
+    //   * |E| / |S| magnitudes  -> non-negative, stay positive (hills only).
+    //   * raw signed Ey (wave)  -> sign kept, so valleys render below the plane.
+    // Saturates symmetrically to the signed 16-bit range.
     function automatic logic signed [DATA_W-1:0] scale_height(
             input logic signed [DATA_W-1:0] m,
             input logic signed [4:0]        ctl);
-        logic [2*DATA_W-1:0] wide;
-        logic [4:0]          amt;
+        logic signed [2*DATA_W-1:0] wide;
+        logic [4:0]                 amt;
+        localparam signed [2*DATA_W-1:0] HMAX =  (1 <<< (DATA_W-1)) - 1; // +32767
+        localparam signed [2*DATA_W-1:0] HMIN = -(1 <<< (DATA_W-1));     // -32768
         begin
             if (ctl >= 0) begin
                 amt  = ctl;
-                wide = ({{DATA_W{1'b0}}, m}) << amt;          // amplify
+                wide = $signed(m) <<< amt;        // amplify, sign preserved
             end else begin
                 amt  = -ctl;
-                wide = {{DATA_W{1'b0}}, (m >> amt)};          // attenuate
+                wide = $signed(m) >>> amt;        // attenuate, arithmetic
             end
-            // saturate to the positive 16-bit range (top bit kept clear)
-            if (|wide[2*DATA_W-1:DATA_W-1])
-                scale_height = {1'b0, {(DATA_W-1){1'b1}}};
-            else
-                scale_height = wide[DATA_W-1:0];
+            if (wide > HMAX)      scale_height = HMAX[DATA_W-1:0];
+            else if (wide < HMIN) scale_height = HMIN[DATA_W-1:0];
+            else                  scale_height = wide[DATA_W-1:0];
         end
     endfunction
 

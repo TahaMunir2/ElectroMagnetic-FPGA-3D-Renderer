@@ -1,5 +1,5 @@
 // ============================================================================
-//  ray_unit4.sv  (Design 4 top-level single-pixel renderer)
+//  ray_unit4.sv  (D4S48 top-level single-pixel renderer)
 //  ----------------------------------------------------------------------------
 //  Chains ray_gen -> marcher4 -> normal4 -> shader.
 //
@@ -8,16 +8,16 @@
 //  cycles on a SINGLE port per step.  Quarter-rate (1 pixel / 4 cycles).
 //
 //  BRAM ports exposed:
-//      marcher4 : N_STEPS * 1 = 16 ports  (flat unpacked array [N_STEPS])
+//      marcher4 : N_STEPS * 1 = 48 ports  (flat unpacked array [N_STEPS])
 //      normal4  : 2 ports
-//      Total copies: 8 (marcher) + 1 (normal) = 9 copies = 18 BRAM18 tiles.
+//      Total heightmap memories: 48 marcher + 2 normal.
 //
-//  Pipeline latency (Design 4):
+//  Pipeline latency (D4S48):
 //      ray_gen  :   4 cycles
-//      marcher4 : 176 cycles (16 march_step4 * 11-cycle latency)
+//      marcher4 : 528 cycles (48 march_step4 * 11-cycle latency)
 //      normal4  :   5 cycles
 //      shader   :   5 cycles
-//      TOTAL    : 190 cycles
+//      TOTAL    : 542 cycles
 //
 //  Throughput: 1 pixel / 4 cycles.
 // ============================================================================
@@ -49,7 +49,7 @@ module ray_unit4 #(
     parameter int H_I         = 2,
     parameter int H_F         = H_W - 1 - H_I,
 
-    parameter int N_STEPS     = 16,
+    parameter int N_STEPS     = 48,
     parameter int STEP_W      = $clog2(N_STEPS + 1),
 
     parameter int FRAC_W      = 8,

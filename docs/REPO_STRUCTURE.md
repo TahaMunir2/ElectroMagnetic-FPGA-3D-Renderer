@@ -8,10 +8,13 @@ source control. Vivado run products and local tool output are ignored.
 - `src/hdl/` - baseline renderer/FDTD HDL modules.
 - `src/tb/` - SystemVerilog testbenches and generated test-vector sources.
 - `design1/`, `design2/`, `design3/`, `design4/` - renderer design variants.
-  Generated Vivado projects inside `design2/` and `design3/` are ignored.
+  Generated Vivado projects inside `design2/`, `design3/`, and `design4/` are
+  ignored.
 - `D1S48/` - 48-step copy of Design 1. Generated Vivado projects inside this
   directory are ignored.
 - `D1S32/` - 32-step copy of Design 1. Generated Vivado projects inside this
+  directory are ignored.
+- `D4S48/` - 48-step copy of Design 4. Generated Vivado projects inside this
   directory are ignored.
 - `wrapper/` - PYNQ-Z1 HDMI and AXI wrappers for the main renderer path.
 - `D1S48/D1_wrapper/` - PYNQ-Z1 HDMI and AXI wrappers for the D1S48 renderer.
@@ -42,6 +45,8 @@ ignored:
 - `D1S32/vivado_project_*/`
 - `design2/vivado_project_*/`
 - `design3/vivado_project_*/`
+- `design4/vivado_project_*/`
+- `D4S48/vivado_project_*/`
 
 ## Commit Guidance
 

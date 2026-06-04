@@ -7,7 +7,7 @@
 //  port instead of 2 cycles on 2 ports.
 //
 //      Design 3:  4 reads / 2 cycles / 2 ports  -> 32 ports -> 32 BRAM, 1px/2c
-//      Design 4:  4 reads / 4 cycles / 1 port   -> 16 ports -> 16 BRAM, 1px/4c
+//      D4S48:     4 reads / 4 cycles / 1 port   -> 48 ports -> 48 BRAM, 1px/4c
 //
 //  The BRAM saving is bought purely with throughput: same total reads per
 //  pixel, spread more thinly in time.  This brings the marcher BRAM cost back

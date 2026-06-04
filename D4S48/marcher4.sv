@@ -5,8 +5,8 @@
 //  lookup (4 corners) but folds the 4 reads across 4 cycles on a SINGLE
 //  dedicated BRAM port.  No sharing between steps.
 //
-//      N_STEPS * 1 read port  (= 16 for N_STEPS=16)
-//      -> 8 heightmap copies (dual-port) -> 16 BRAM18 tiles
+//      N_STEPS * 1 read port  (= 48 for N_STEPS=48)
+//      -> 48 independent single-port heightmap memories
 //
 //  A 2-bit `phase` counter (0..3) is maintained for documentation / future
 //  use, but the per-step read scheduling is self-contained inside
@@ -44,7 +44,7 @@ module marcher4 #(
     parameter int PX_W       = 10,
     parameter int PY_W       = 10,
 
-    parameter int N_STEPS    = 16,
+    parameter int N_STEPS    = 48,
     parameter int STEP_W     = $clog2(N_STEPS + 1),
 
     parameter int FRAC_W     = 8,

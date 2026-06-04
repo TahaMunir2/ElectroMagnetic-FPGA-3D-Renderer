@@ -1,6 +1,6 @@
-// PYNQ-Z1 HDMI wrapper for Design4.
+// PYNQ-Z1 HDMI wrapper for the 48-step Design4 variant.
 //
-// Design4 accepts one pixel every four 100 MHz core cycles, matching the
+// D4S48 accepts one pixel every four 100 MHz core cycles, matching the
 // 25 MHz HDMI pixel rate. The core-domain generator follows the complete VGA
 // timing, including blanking, so the asynchronous FIFO only bridges pipeline
 // latency and clock-domain phase.
@@ -9,7 +9,7 @@
 //   clk_wiz_1: 125 MHz input, 25 MHz pixel, 125 MHz serial, 100 MHz core
 //   rgb2dvi_0: external PixelClk and SerialClk
 
-module ray_unit_hdmi_top_d4 (
+module ray_unit_hdmi_top_d4s48 (
     input  logic       clk,
     input  logic       rst,
 
@@ -36,7 +36,7 @@ module ray_unit_hdmi_top_d4 (
     localparam int IDX_W   = 6;
     localparam int ADDR_W  = IDX_W * 2;
 
-    localparam int N_STEPS = 16;
+    localparam int N_STEPS = 48;
     localparam int H_W     = 16;
     localparam int DIR_W   = 16;
     localparam int POS_W   = 16;
@@ -79,8 +79,27 @@ module ray_unit_hdmi_top_d4 (
 
     logic rst_pix_n;
     logic rst_core_n;
-    assign rst_pix_n  = ~rst & clk_locked;
-    assign rst_core_n = ~rst & clk_locked;
+    (* ASYNC_REG = "TRUE" *) logic [3:0] pix_reset_sync;
+    (* ASYNC_REG = "TRUE" *) logic [3:0] core_reset_sync;
+
+    // Assert reset immediately if the button is pressed or the MMCM loses
+    // lock, then release it synchronously in each generated clock domain.
+    always_ff @(posedge clk_pix or posedge rst or negedge clk_locked) begin
+        if (rst || !clk_locked)
+            pix_reset_sync <= '0;
+        else
+            pix_reset_sync <= {pix_reset_sync[2:0], 1'b1};
+    end
+
+    always_ff @(posedge clk_core or posedge rst or negedge clk_locked) begin
+        if (rst || !clk_locked)
+            core_reset_sync <= '0;
+        else
+            core_reset_sync <= {core_reset_sync[2:0], 1'b1};
+    end
+
+    assign rst_pix_n  = pix_reset_sync[3];
+    assign rst_core_n = core_reset_sync[3];
 
     // Render-domain copy of the full 800x525 VGA timing. Coordinates advance
     // once every four core clocks and only active pixels enter the renderer.
@@ -124,7 +143,7 @@ module ray_unit_hdmi_top_d4 (
 
     genvar gi;
     generate
-        // Design4 captures data in the cycles after its logical read requests.
+        // D4S48 captures data in the cycles after its logical read requests.
         // Keep every inferred BRAM output register clock-enabled.
         for (gi = 0; gi < N_STEPS; gi++) begin : g_marcher_bram
             heightmap_bram #(.ADDR_W(ADDR_W), .DATA_W(H_W)) u_bram (
@@ -215,8 +234,12 @@ module ray_unit_hdmi_top_d4 (
     logic [VIDEO_DELAY_PIX-1:0] hsync_pipe;
     logic [VIDEO_DELAY_PIX-1:0] vsync_pipe;
     logic [VIDEO_DELAY_PIX-1:0] de_pipe;
+    logic                       delayed_active;
+    logic                       fifo_underflow;
 
-    assign fifo_rd_en = de_pipe[VIDEO_DELAY_PIX-1] & ~fifo_empty & ~rd_rst_busy;
+    assign delayed_active = de_pipe[VIDEO_DELAY_PIX-1];
+    assign fifo_rd_en      = delayed_active & ~fifo_empty & ~rd_rst_busy;
+    assign fifo_underflow  = delayed_active & (fifo_empty | rd_rst_busy);
 
     always_ff @(posedge clk_pix) begin
         if (!rst_pix_n) begin
@@ -236,12 +259,20 @@ module ray_unit_hdmi_top_d4 (
 
             hdmi_hsync <= hsync_pipe[VIDEO_DELAY_PIX-1];
             hdmi_vsync <= vsync_pipe[VIDEO_DELAY_PIX-1];
-            hdmi_de    <= fifo_rd_en;
+            // Active-video timing must never depend on renderer/FIFO status.
+            // Gating VDE with fifo_empty corrupts the raster and can make a
+            // monitor report "no signal".
+            hdmi_de    <= delayed_active;
 
             if (fifo_rd_en) begin
                 hdmi_r <= fifo_dout[23:16];
                 hdmi_g <= fifo_dout[15:8];
                 hdmi_b <= fifo_dout[7:0];
+            end else if (fifo_underflow) begin
+                // Visible board diagnostic while preserving valid HDMI timing.
+                hdmi_r <= 8'hff;
+                hdmi_g <= 8'h00;
+                hdmi_b <= 8'hff;
             end else begin
                 hdmi_r <= 8'd0;
                 hdmi_g <= 8'd0;

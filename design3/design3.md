@@ -1,1 +1,30 @@
-Design 3 is the variant of the heightmap raycaster that performs a true bilinear interpolation of the heightmap surface inside every march step, rather than the nearest-neighbour lookup used in Designs 1 and 2. Where the earlier designs only smoothed the shading, Design 3 smooths the silhouette too: because each step now compares the ray's height Pz against a bilinearly-interpolated surface height h_interp (instead of a single cell's height), hits land on the smooth surface and the terrain edges are no longer blocky at cell boundaries. To get the four corner heights h00, h10, h01, h11 needed for interpolation, each march_step3 instance now issues 2 BRAM reads per cycle and spreads its 4 corner reads across 2 cycles (left column on phase 0, right column on phase 1), so the whole pipeline runs at half rate (1 pixel every 2 cycles) — the same throughput as Design 2. Unlike Design 2, adjacent steps cannot share a BRAM copy (each step needs its own 4 distinct corners), so the MY_PHASE pairing/muxing logic is removed entirely and each step simply owns its own 2 ports. This pushes the marcher's BRAM cost to 32 ports → 16 heightmap copies → 32 BRAM18 tiles, plus 2 tiles for the normal module, for a total of 34 BRAMs — the most expensive of the four variants, at a target of 163 fps. Internally, each step grows from Design 2's 5 stages to 7 stages (A advance, B index+frac+read, C capture first column, C2 capture second column, D x-lerps, D2 y-lerp+hit-test, E output buffer); the bilinear lerp is deliberately split across stages D and D2 to keep the dependent-multiply chain shallow enough to close timing at 100 MHz. Because the marcher now produces a smooth height directly, normal3 is simplified: it drops Design 2's height interpolation and only computes a cheap forward-difference surface normal from 3 corners using a single 2-port/1-copy BRAM, passing the marcher's smooth h_hit straight through to the shader. The frozen-ray pattern, the Bug 2 fix (step 0 cannot declare a HIT), and the fixed-point formats are all preserved exactly, with the lerp arithmetic reused verbatim from normal2 so the Python golden model stays bit-identical. The ray_gen and shader modules are unchanged, and the shader interface is byte-compatible with Design 2 since normal3 still exports h_interp_out. The one integration caveat is that march_step3 relies on standard Xilinx BRAM behaviour where the output data is valid one cycle after the address regardless of the read-enable line, so the shared heightmap BRAM must keep its read-port clock-enable always on and must not gate the data path on re. Net effect: Design 3 buys smooth silhouettes over Design 2 at the cost of 24 extra BRAM tiles and two extra pipeline stages per step, with identical 163 fps throughput.
+# Design 3
+
+Design 3 performs bilinear height interpolation inside every march step, which
+smooths the terrain silhouette as well as its shading. It remains a half-rate
+renderer: the core runs at 50 MHz and accepts one active pixel every two core
+cycles while HDMI scans at 25 MHz.
+
+The current hardware target uses `N_STEPS=48`. Each `march_step3` owns two
+heightmap read ports and reads four bilinear corners over two cycles. The
+marcher therefore exposes 96 single-port heightmap read ports, and `normal3`
+uses two more.
+
+Latency:
+
+- `ray_gen`: 4 cycles
+- `marcher3`: 336 cycles, from 48 steps at 7 cycles per step
+- `normal3`: 5 cycles
+- `shader`: 5 cycles
+- Total render latency: 350 renderer-core cycles, or 175 pixel-clock cycles
+
+The HDMI top includes the full `800 x 525` VGA timing in the core domain and
+feeds the renderer only during the `640 x 480` active area. This keeps the FIFO
+producer rate matched to scanout instead of filling the FIFO during blanking.
+The HDMI sync and data-enable signals are delayed by the 175-pixel render
+latency before FIFO pixels are displayed.
+
+Design3's bilinear marcher also requires each heightmap BRAM output register to
+clock every cycle. The HDMI top therefore ties each BRAM `re` input high; using
+the per-step request signal as the BRAM clock enable causes stale corner data
+and can produce an all-sky image.

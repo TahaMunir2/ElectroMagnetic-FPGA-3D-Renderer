@@ -30,6 +30,12 @@ Generate the Design2 HDMI project:
 vivado -mode batch -source scripts/create_design2_vivado_project.tcl
 ```
 
+Generate the Design3 HDMI project:
+
+```powershell
+vivado -mode batch -source scripts/create_design3_vivado_project.tcl
+```
+
 Build an existing generated project through bitstream generation:
 
 ```powershell

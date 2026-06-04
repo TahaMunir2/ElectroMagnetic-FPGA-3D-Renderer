@@ -9,6 +9,7 @@ Run these from the repository root:
 ```powershell
 vivado -mode batch -source scripts/create_renderer_bd.tcl
 vivado -mode batch -source scripts/create_design2_vivado_project.tcl
+vivado -mode batch -source scripts/create_design3_vivado_project.tcl
 vivado -mode batch -source scripts/create_d1s48_vivado_project.tcl
 vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl
 vivado -mode batch -source scripts/create_d1s32_vivado_project.tcl
@@ -17,15 +18,16 @@ vivado -mode batch -source scripts/create_d1s32_camera_bd_project.tcl
 
 Use `-tclargs -force` to recreate an existing generated project.
 
-The Design2, D1S48, and D1S32 generators also accept `-project_dir <path>` if
-the default generated project directory is locked or if you want a separate
-output copy.
+The Design2, Design3, D1S48, and D1S32 generators also accept
+`-project_dir <path>` if the default generated project directory is locked or
+if you want a separate output copy.
 
 For `rgb2dvi`, install or point Vivado to the Digilent Vivado IP library. The
-Design2 and D1S camera project scripts accept:
+Design2, Design3, and D1S camera project scripts accept:
 
 ```powershell
 vivado -mode batch -source scripts/create_design2_vivado_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
+vivado -mode batch -source scripts/create_design3_vivado_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 vivado -mode batch -source scripts/create_d1s32_camera_bd_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 ```
@@ -49,6 +51,8 @@ xvlog -sv wrapper/heightmap_bram.sv design2/ray_gen.sv design2/march_step2.sv de
 xelab --relax tb_ray_unit2_smoke -snapshot tb_ray_unit2_smoke
 xsim tb_ray_unit2_smoke -runall
 ```
+
+The equivalent Design3 smoke test is `design3/tb_ray_unit3_smoke.sv`.
 
 ## PYNQ Helpers
 

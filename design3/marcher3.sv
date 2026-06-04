@@ -6,8 +6,8 @@
 //  lookup needing its own 4 corners, which it reads over 2 cycles on its own
 //  2 dedicated ports.  The marcher therefore exposes:
 //
-//      N_STEPS * 2 read ports  (= 32 for N_STEPS=16)
-//      -> 16 heightmap copies (dual-port) -> 32 BRAM18 tiles
+//      N_STEPS * 2 read ports  (= 96 for N_STEPS=48)
+//      -> 48 logical dual-port heightmap copies
 //
 //  A single 1-bit `phase` counter (toggles every cycle) is broadcast to all
 //  steps; inside each step it selects the LEFT vs RIGHT column to read.
@@ -43,7 +43,7 @@ module marcher3 #(
     parameter int PX_W       = 10,
     parameter int PY_W       = 10,
 
-    parameter int N_STEPS    = 16,
+    parameter int N_STEPS    = 48,
     parameter int STEP_W     = $clog2(N_STEPS + 1),
 
     parameter int FRAC_W     = 8,

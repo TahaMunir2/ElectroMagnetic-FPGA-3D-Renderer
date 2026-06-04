@@ -7,16 +7,16 @@
 //  half-rate (1 pixel / 2 cycles).
 //
 //  BRAM ports exposed:
-//      marcher3 : N_STEPS * 2 = 32 ports  (2-D unpacked array [N_STEPS][2])
+//      marcher3 : N_STEPS * 2 = 96 ports  (2-D unpacked array [N_STEPS][2])
 //      normal3  : 2 ports
-//      Total copies: 16 (marcher) + 1 (normal) = 17 copies = 34 BRAM18 tiles.
+//      Total copies: 48 (marcher) + 1 (normal) = 49 logical dual-port copies.
 //
 //  Pipeline latency (Design 3):
 //      ray_gen  :   4 cycles
-//      marcher3 : 112 cycles (16 march_step3 * 7 stages)
+//      marcher3 : 336 cycles (48 march_step3 * 7 stages)
 //      normal3  :   5 cycles
 //      shader   :   5 cycles
-//      TOTAL    : 126 cycles
+//      TOTAL    : 350 cycles
 //
 //  Throughput: 1 pixel / 2 cycles.
 // ============================================================================
@@ -48,7 +48,7 @@ module ray_unit3 #(
     parameter int H_I         = 2,
     parameter int H_F         = H_W - 1 - H_I,
 
-    parameter int N_STEPS     = 16,
+    parameter int N_STEPS     = 48,
     parameter int STEP_W      = $clog2(N_STEPS + 1),
 
     parameter int FRAC_W      = 8,

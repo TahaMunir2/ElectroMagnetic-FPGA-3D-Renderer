@@ -29,7 +29,7 @@ module shader #(
     parameter int DIR_W      = 16,
     parameter int DIR_I      = 2,
     parameter int DIR_F      = DIR_W - 1 - DIR_I,
-    parameter int N_STEPS    = 16,
+    parameter int N_STEPS    = 48,
     parameter int STEP_W     = $clog2(N_STEPS + 1),
     parameter int PX_W       = 10,
     parameter int PY_W       = 10,

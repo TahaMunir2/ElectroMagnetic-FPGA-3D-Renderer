@@ -19,7 +19,7 @@
 #    0x41200000  axi_gpio_ctrl    CH1: {amplitude_q313, phase_step_q313}
 #                                 CH2: {16'b0, free_run, sample_req, mag_mode,
 #                                       solver_enable, source_addr[11:0]}
-#    0x41210000  axi_gpio_status  CH1: solver_checksum[31:0]
+#    0x41220000  axi_gpio_status  CH1: solver_checksum[31:0]
 #                                 CH2: {source_q313[15:0], 8'b0, bridge_busy,
 #                                       pp_frame_ready, pp_read_sel, source_latched,
 #                                       mag_busy, mag_done, source_valid, solver_done}
@@ -505,9 +505,11 @@ assign_bd_address
 # force the documented offsets
 catch { set_property offset 0x40000000 [get_bd_addr_segs -of_objects [get_bd_intf_pins renderer_0/S_AXI]] }
 catch { set_property range  4K          [get_bd_addr_segs -of_objects [get_bd_intf_pins renderer_0/S_AXI]] }
+# Force a deterministic, non-overlapping map (low->high; matches the notebook).
+#   ctrl 0x41200000 | src 0x41210000 | status 0x41220000
 catch { set_property offset 0x41200000 [get_bd_addr_segs {axi_gpio_ctrl/S_AXI/Reg}] }
-catch { set_property offset 0x41210000 [get_bd_addr_segs {axi_gpio_status/S_AXI/Reg}] }
-catch { set_property offset 0x41230000 [get_bd_addr_segs {axi_gpio_src/S_AXI/Reg}] }
+catch { set_property offset 0x41210000 [get_bd_addr_segs {axi_gpio_src/S_AXI/Reg}] }
+catch { set_property offset 0x41220000 [get_bd_addr_segs {axi_gpio_status/S_AXI/Reg}] }
 
 # ---------------------------------------------------------------------------
 #  Finalise

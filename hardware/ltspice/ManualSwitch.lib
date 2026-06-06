@@ -1,0 +1,81 @@
+*
+* ManualSwitch.lib
+* LTspice manual switch models for the EE2 FPGA input circuits.
+*
+* These are parameter-controlled ideal contact models. They are useful for
+* manually choosing switch/button states in a schematic without adding a
+* voltage-controlled switch driver circuit.
+*
+* Ron/Roff defaults:
+*   RON  = 50 milliohm closed contact
+*   ROFF = 1 gigaohm open contact
+*
+* Usage examples:
+*
+*   .include ManualSwitch.lib
+*
+*   SPST normally-open switch:
+*     XSW node_a node_b MANUAL_SPST_NO STATE=1
+*       STATE=0 -> open
+*       STATE=1 -> closed
+*
+*   SPST normally-closed switch:
+*     XSW node_a node_b MANUAL_SPST_NC STATE=0
+*       STATE=0 -> closed
+*       STATE=1 -> open
+*
+*   SPDT switch:
+*     XSW common throw_high throw_low MANUAL_SPDT STATE=1
+*       STATE=0 -> common connected to throw_low
+*       STATE=1 -> common connected to throw_high
+*
+*   Active-low push button to ground:
+*     Rpull gpio CTRL_3V3 10k
+*     XBTN gpio 0 MANUAL_PUSH_NO PRESS=1
+*       PRESS=0 -> released
+*       PRESS=1 -> pressed, gpio pulled low
+*
+* Suggested for this project:
+*   Mode switch:
+*     XMODE SW_MODE_TO_3V3_OR_GND CTRL_3V3 0 MANUAL_SPDT STATE=0
+*       STATE=0 -> Mode 1
+*       STATE=1 -> Mode 2
+*
+*   Display switch:
+*     XDISP SW_DISPLAY_TO_3V3_OR_GND CTRL_3V3 0 MANUAL_SPDT STATE=0
+*       STATE=0 -> 2D
+*       STATE=1 -> 3D
+*
+*   Wall/source switch:
+*     XWALL GPIO5_WALL_SOURCE 0 MANUAL_SPST_NO STATE=0
+*       with a pull-up to CTRL_3V3
+*       STATE=0 -> source/high
+*       STATE=1 -> wall/low
+*
+*   Clear button:
+*     XCLEAR GPIO18_CLEAR_BUTTON 0 MANUAL_PUSH_NO PRESS=0
+*       with a pull-up to CTRL_3V3
+*       PRESS=0 -> not clearing/high
+*       PRESS=1 -> clear pressed/low
+*
+
+.subckt MANUAL_SPST_NO a b PARAMS: STATE=0 RON=50m ROFF=1G
+Rsw a b {if(STATE>0.5,RON,ROFF)}
+.ends MANUAL_SPST_NO
+
+.subckt MANUAL_SPST_NC a b PARAMS: STATE=0 RON=50m ROFF=1G
+Rsw a b {if(STATE>0.5,ROFF,RON)}
+.ends MANUAL_SPST_NC
+
+.subckt MANUAL_PUSH_NO a b PARAMS: PRESS=0 RON=50m ROFF=1G
+Rsw a b {if(PRESS>0.5,RON,ROFF)}
+.ends MANUAL_PUSH_NO
+
+.subckt MANUAL_PUSH_NC a b PARAMS: PRESS=0 RON=50m ROFF=1G
+Rsw a b {if(PRESS>0.5,ROFF,RON)}
+.ends MANUAL_PUSH_NC
+
+.subckt MANUAL_SPDT common throw_high throw_low PARAMS: STATE=0 RON=50m ROFF=1G
+Rhigh common throw_high {if(STATE>0.5,RON,ROFF)}
+Rlow  common throw_low  {if(STATE>0.5,ROFF,RON)}
+.ends MANUAL_SPDT

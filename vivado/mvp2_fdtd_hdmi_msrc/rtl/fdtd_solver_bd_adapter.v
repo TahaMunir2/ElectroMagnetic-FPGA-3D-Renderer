@@ -18,6 +18,14 @@ module fdtd_solver_bd_adapter #(
     input  wire free_run,
     input  wire frame_done,          // = field_magnitude done pulse (mag_done)
 
+    // Field clear: a rising edge on clear_req zeros the Ey/Ex/Bz BRAMs (a true
+    // simulation reset). The solver is held off and the clear waits for any
+    // in-flight magnitude scan (mag_busy) to finish first. In free-run the
+    // renderer then flattens within a frame via the magnitude->bridge path.
+    input  wire clear_req,
+    input  wire mag_busy,
+    output wire clear_busy,
+
     input  wire [DATA_WIDTH-1:0]     source_q313,
     input  wire                      source_valid,
     output wire                      source_latched,
@@ -122,9 +130,42 @@ module fdtd_solver_bd_adapter #(
     reg  fr_state;
     wire solver_enable_core;
 
+    // ------------------------------------------------------------------
+    //  Field-clear sweep: on a rising edge of clear_req, zero all Ey/Ex/Bz
+    //  cells (0..GRID_SIZE-1) via the write ports. Solver is held off and the
+    //  free-run FSM is parked at S_SOLVE so it restarts cleanly afterwards.
+    // ------------------------------------------------------------------
+    localparam [2*CELL_WIDTH+1:0] GRID_CELLS = CELLS*CELLS;
+    reg  [2*CELL_WIDTH-1:0] clear_addr;
+    reg                     clearing;
+    reg                     clear_req_d;
+    wire                    clear_start = clear_req & ~clear_req_d;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            clearing    <= 1'b0;
+            clear_addr  <= {2*CELL_WIDTH{1'b0}};
+            clear_req_d <= 1'b0;
+        end else begin
+            clear_req_d <= clear_req;
+            if (clearing) begin
+                if (clear_addr == GRID_CELLS[2*CELL_WIDTH-1:0] - 1'b1)
+                    clearing <= 1'b0;
+                else
+                    clear_addr <= clear_addr + 1'b1;
+            end else if (clear_start && !mag_busy) begin
+                clearing   <= 1'b1;     // begin sweep once magnitude is idle
+                clear_addr <= {2*CELL_WIDTH{1'b0}};
+            end
+        end
+    end
+    assign clear_busy = clearing;
+
     always @(posedge clk) begin
         if (rst) begin
             fr_state <= S_SOLVE;        // begin solving as soon as reset clears
+        end else if (clearing) begin
+            fr_state <= S_SOLVE;        // park: restart a fresh solve after clear
         end else begin
             case (fr_state)
                 S_SOLVE:   if (solver_done) fr_state <= S_WAITMAG;
@@ -133,7 +174,9 @@ module fdtd_solver_bd_adapter #(
         end
     end
 
-    assign solver_enable_core = free_run ? (fr_state == S_SOLVE) : solver_enable;
+    // hold the solver off during a clear sweep
+    assign solver_enable_core = clearing ? 1'b0 :
+                                (free_run ? (fr_state == S_SOLVE) : solver_enable);
 
     assign solver_write_event = ey_we | ex_we | bz_we;
     assign solver_write_mix =
@@ -179,31 +222,32 @@ module fdtd_solver_bd_adapter #(
         .ey_adj_dout(ey_doutb)
     );
 
+    // During a clear sweep, port B writes 0 to clear_addr across all 3 fields.
     assign ey_addra = ey_rd_addr;
     assign ey_ena   = 1'b1;
     assign ey_wea   = 1'b0;
     assign ey_dina  = {DATA_WIDTH{1'b0}};
-    assign ey_addrb = ey_we ? ey_wr_addr : ey_adj_rd_addr;
+    assign ey_addrb = clearing ? clear_addr : (ey_we ? ey_wr_addr : ey_adj_rd_addr);
     assign ey_enb   = 1'b1;
-    assign ey_web   = ey_we;
-    assign ey_dinb  = ey_wr_data;
+    assign ey_web   = clearing ? 1'b1 : ey_we;
+    assign ey_dinb  = clearing ? {DATA_WIDTH{1'b0}} : ey_wr_data;
 
     assign ex_addra = ex_rd_addr;
     assign ex_ena   = 1'b1;
     assign ex_wea   = 1'b0;
     assign ex_dina  = {DATA_WIDTH{1'b0}};
-    assign ex_addrb = ex_wr_addr;
+    assign ex_addrb = clearing ? clear_addr : ex_wr_addr;
     assign ex_enb   = 1'b1;
-    assign ex_web   = ex_we;
-    assign ex_dinb  = ex_wr_data;
+    assign ex_web   = clearing ? 1'b1 : ex_we;
+    assign ex_dinb  = clearing ? {DATA_WIDTH{1'b0}} : ex_wr_data;
 
     assign bz_addra = bz_rd_addr;
     assign bz_ena   = 1'b1;
     assign bz_wea   = 1'b0;
     assign bz_dina  = {DATA_WIDTH{1'b0}};
-    assign bz_addrb = bz_we ? bz_wr_addr : bz_adj_rd_addr;
+    assign bz_addrb = clearing ? clear_addr : (bz_we ? bz_wr_addr : bz_adj_rd_addr);
     assign bz_enb   = 1'b1;
-    assign bz_web   = bz_we;
-    assign bz_dinb  = bz_wr_data;
+    assign bz_web   = clearing ? 1'b1 : bz_we;
+    assign bz_dinb  = clearing ? {DATA_WIDTH{1'b0}} : bz_wr_data;
 
 endmodule

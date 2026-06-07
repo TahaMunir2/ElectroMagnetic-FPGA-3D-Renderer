@@ -29,7 +29,7 @@ BRAM 114/140 (81%), LUT 21% / FF 14% / DSP 9%.
 | Offset | Block | Notes |
 |--------|-------|-------|
 | 0x40000000 | renderer camera control | AXI4-Lite; sane defaults, optional |
-| 0x41200000 | axi_gpio_ctrl | CH1 {amplitude, phase_step}; CH2 {free_run[15], sample_req[14], mag_mode[13], solver_enable[12], source_addr[11:0]} |
+| 0x41200000 | axi_gpio_ctrl | CH1 {amplitude, phase_step}; CH2 {free_run[15], sample_req[14], mag_mode[13], solver_enable[12], source_addr[11:0]}; CH2 also: height_ctl[20:16], mag_mode_hi[21], clear_req[22] |
 | 0x41210000 | axi_gpio_src | source positions 1-3 + per-source enables (CH1 {en[3:0]@24, src2@12, src1@0}; CH2 src3@0) |
 | 0x41220000 | axi_gpio_status | CH1 solver_checksum; CH2 {source_q313[31:16], bridge_busy[7], pp_frame_ready[6], pp_read_sel[5], source_latched[4], mag_busy[3], mag_done[2], source_valid[1], solver_done[0]} |
 

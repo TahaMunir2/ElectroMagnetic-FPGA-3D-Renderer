@@ -431,16 +431,20 @@ make_slice slice_sample_req  14 14 32
 make_slice slice_free_run    15 15 32
 make_slice slice_height_ctl  20 16 32
 make_slice slice_mag_mode_hi 21 21 32
+make_slice slice_clear_req   22 22 32
 connect_bd_net [get_bd_pins axi_gpio_ctrl/gpio2_io_o] \
     [get_bd_pins slice_source_addr/Din] [get_bd_pins slice_solver_en/Din] \
     [get_bd_pins slice_mag_mode/Din] [get_bd_pins slice_sample_req/Din] \
     [get_bd_pins slice_free_run/Din] [get_bd_pins slice_height_ctl/Din] \
-    [get_bd_pins slice_mag_mode_hi/Din]
+    [get_bd_pins slice_mag_mode_hi/Din] [get_bd_pins slice_clear_req/Din]
 connect_bd_net [get_bd_pins slice_source_addr/Dout] [get_bd_pins fdtd_solver_bd_adapter_0/source_addr]
 connect_bd_net [get_bd_pins slice_solver_en/Dout]   [get_bd_pins fdtd_solver_bd_adapter_0/solver_enable]
 connect_bd_net [get_bd_pins slice_free_run/Dout]    [get_bd_pins fdtd_solver_bd_adapter_0/free_run]
 connect_bd_net [get_bd_pins slice_sample_req/Dout]  [get_bd_pins cordic_source_adapter_0/sample_req]
 connect_bd_net [get_bd_pins slice_height_ctl/Dout]  [get_bd_pins bridge_0/height_ctl]
+connect_bd_net [get_bd_pins slice_clear_req/Dout]   [get_bd_pins fdtd_solver_bd_adapter_0/clear_req]
+# field-magnitude busy -> solver adapter, so a clear defers until the scan ends
+connect_bd_net [get_bd_pins field_magnitude_bd_adapter_0/busy] [get_bd_pins fdtd_solver_bd_adapter_0/mag_busy]
 # mag_mode is 2-bit: {bit21, bit13} -> 0=|E|, 1=|S|, 2=raw signed Ey (wave)
 create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 mag_mode_concat
 set_property -dict [list CONFIG.NUM_PORTS {2} CONFIG.IN0_WIDTH {1} CONFIG.IN1_WIDTH {1}] [get_bd_cells mag_mode_concat]

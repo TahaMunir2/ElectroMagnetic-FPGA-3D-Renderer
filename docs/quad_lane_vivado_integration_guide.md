@@ -1,7 +1,17 @@
 # Quad-Lane FDTD Vivado Integration Guide
 
 This document covers every HDL change since the MVP3 baseline and gives exact
-steps to update the Vivado project for the 4-lane parallel architecture.
+steps to update the Vivado project for the quad-lane configuration.
+
+For the 16-lane 128×128 design see `docs/hex_lane_vivado_integration_guide.md`.
+
+| Config | File | Grid | Lanes | Rows/lane | CELL_WIDTH | Iteration cycles | BRAM18s | BRAM36s |
+|--------|------|------|-------|-----------|------------|-----------------|---------|---------|
+| Quad-lane | `top_fdtd_quad_lane.sv` | 64×64 | 4 | 16 | 6 | 2048 | 24 | 12 |
+
+Source address for grid centre: `12'd2080` (64×32+32).
+
+---
 
 ---
 
@@ -169,11 +179,10 @@ better than −100 dB.
 
 The hardware block design used `SOURCE_ADDR = 18528` (centre of a 192×192
 grid: 192 × 96 + 96). The quad-lane design uses a 12-bit flat address space
-(64×64 = 4096 cells). If you drive a centre source, update the address to
-`2080` (= 64 × 32 + 32).
+(64×64 = 4096 cells). Update the address to `2080` (= 64 × 32 + 32).
 
-`source_addr` is a runtime input port on `top_fdtd_quad_lane`, so no HDL
-rebuild is required — change the value in your AXI GPIO / PS software layer.
+`source_addr` is a runtime input port, so no HDL rebuild is required — change
+the value in your AXI GPIO / PS software layer.
 
 ---
 
@@ -254,7 +263,7 @@ add no timing pressure.
 | 9 | Remove old BD BRAM IPs | `ey_bram`, `ex_bram`, `bz_bram` IP blocks no longer needed |
 | 10 | Keep constraint | `create_clock -period 10.000` unchanged |
 | 11 | Re-validate | Run *Validate Design* — no critical errors expected |
-| 12 | Synthesise | Check BRAM utilisation: expect 24 BRAM18s |
+| 12 | Synthesise | Check BRAM utilisation: 24 BRAM18s |
 | 13 | Implement | WNS should be ≥ 0 at 100 MHz; critical path unchanged from MVP3 |
 
 ---
@@ -263,16 +272,19 @@ add no timing pressure.
 
 All 9 testbench tests pass on `tests/tb_top_fdtd_quad_lane.sv`:
 
-1. `solver_done` fires after exactly 2048 cycles
-2. Source injection writes nonzero Ey at the correct address
-3. Ey global row 0 forced to zero (PEC boundary)
-4. Ey global row 63 forced to zero (PEC boundary)
-5. Ex col 0 forced to zero across all lanes
-6. Ex col 63 forced to zero across all lanes
-7. Cross-lane propagation: lane 1 has nonzero Ey after 21 iterations
-8. `solver_done` re-fires correctly on repeated iterations
-9. `rst` halts the solver mid-run
+| Test | Result |
+|------|--------|
+| 1. `solver_done` timing (2048 cycles) | PASS |
+| 2. Source injection nonzero | PASS |
+| 3. Ey top boundary zero | PASS |
+| 4. Ey bottom boundary zero | PASS |
+| 5. Ex left boundary zero | PASS |
+| 6. Ex right boundary zero | PASS |
+| 7. Cross-lane propagation | PASS |
+| 8. `solver_done` re-fires | PASS |
+| 9. `rst` halts solver | PASS |
 
 Test 7 confirms the halo exchange is working — energy propagates from lane 0
 into lane 1, which requires the Bz halo read from lane 0's BRAM port 1 and
-the Ey halo read from lane 1's BRAM port 1 to both be correctly routed.
+the Ey halo read from lane 1's BRAM port 1 to both be correctly timed and
+routed.

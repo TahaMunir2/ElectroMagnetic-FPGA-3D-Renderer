@@ -38,3 +38,15 @@ to tune relief, `clear_fields()` to reset. Single source this build
 - Taha's `top_fdtd_quad_lane` standalone: `solver_done` at cycle 2047 (= 2x1024).
 - Full front-end `tb_quad_front.sv`: 6 free-run frames, live s_mag field at the
   source, checksum advancing -> quad core + read-back + magnitude all correct.
+
+## UDP source-magnitude control (ESP32 -> PS)
+The ESP32 streams a probe value over WiFi/UDP to the PYNQ PS, which maps it to
+the FDTD **source amplitude** live (one fixed source at the grid centre).
+- Port **5005**, packet = one ASCII integer per datagram (e.g. `2731`).
+- Both devices on the same local network (ESP32 on the WiFi router the PYNQ
+  Ethernet is on).
+- ESP32: `esp32/source_magnitude_udp.ino` (set SSID/PASS/PYNQ_IP, probe on the
+  ADC pin).
+- PS: `MagnitudeUDP` cell in `test_fdtd_hdmi_quad.ipynb` — `mc.calibrate()` to
+  find the probe range, then `mc.start()`; a daemon thread drives `amplitude`
+  (gpio_ctrl CH1[31:16]) from the latest packet. `mc.stop()` to end.

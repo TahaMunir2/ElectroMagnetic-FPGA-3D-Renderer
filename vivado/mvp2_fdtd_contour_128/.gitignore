@@ -1,0 +1,4 @@
+obj_dir/
+*.out
+build_*.log
+*.jou

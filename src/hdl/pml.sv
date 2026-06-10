@@ -13,38 +13,38 @@ module pml #(
         case (d)
             0: begin
                 ca = 16'sd8192;
-                cb_e = -16'sd25;
-                cb_bz = -16'sd25;
+                cb_e = -16'sd6;
+                cb_bz = -16'sd6;
             end
             1: begin
                 ca = 16'sd8191;
-                cb_e = -16'sd25;
-                cb_bz = -16'sd25;
+                cb_e = -16'sd6;
+                cb_bz = -16'sd6;
             end
             2: begin
                 ca = 16'sd8184;
-                cb_e = -16'sd25;
-                cb_bz = -16'sd25;
+                cb_e = -16'sd6;
+                cb_bz = -16'sd6;
             end
             3: begin
                 ca = 16'sd8165;
-                cb_e = -16'sd25;
-                cb_bz = -16'sd25;
+                cb_e = -16'sd6;
+                cb_bz = -16'sd6;
             end
             4: begin
                 ca = 16'sd8128;
-                cb_e = -16'sd25;
-                cb_bz = -16'sd25;
+                cb_e = -16'sd6;
+                cb_bz = -16'sd6;
             end
             5: begin
                 ca = 16'sd8067;
-                cb_e = -16'sd25;
-                cb_bz = -16'sd25;
+                cb_e = -16'sd6;
+                cb_bz = -16'sd6;
             end
             default: begin
                 ca = 16'sd8192;
-                cb_e = -16'sd25;
-                cb_bz = -16'sd25;
+                cb_e = -16'sd6;
+                cb_bz = -16'sd6;
             end
         endcase
     end

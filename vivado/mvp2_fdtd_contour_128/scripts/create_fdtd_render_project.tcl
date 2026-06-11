@@ -351,12 +351,12 @@ connect_bd_net [get_bd_pins rgb2dvi_0/TMDS_Data_n] [get_bd_ports hdmi_tx_n]
 #  AXI interconnect: PS GP0 -> renderer camera + 2 GPIO
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_ic_0
-set_property CONFIG.NUM_MI {2} [get_bd_cells axi_ic_0]
+set_property CONFIG.NUM_MI {3} [get_bd_cells axi_ic_0]
 connect_bd_net $FCLK [get_bd_pins axi_ic_0/ACLK] [get_bd_pins axi_ic_0/S00_ACLK] \
-    [get_bd_pins axi_ic_0/M00_ACLK] [get_bd_pins axi_ic_0/M01_ACLK]
+    [get_bd_pins axi_ic_0/M00_ACLK] [get_bd_pins axi_ic_0/M01_ACLK] [get_bd_pins axi_ic_0/M02_ACLK]
 connect_bd_net $IC_ARSTN [get_bd_pins axi_ic_0/ARESETN]
 connect_bd_net $PS_ARSTN [get_bd_pins axi_ic_0/S00_ARESETN] \
-    [get_bd_pins axi_ic_0/M00_ARESETN] [get_bd_pins axi_ic_0/M01_ARESETN]
+    [get_bd_pins axi_ic_0/M00_ARESETN] [get_bd_pins axi_ic_0/M01_ARESETN] [get_bd_pins axi_ic_0/M02_ARESETN]
 connect_bd_intf_net [get_bd_intf_pins ps7_0/M_AXI_GP0] [get_bd_intf_pins axi_ic_0/S00_AXI]
 
 # ---- axi_gpio_ctrl (M00) ----
@@ -428,12 +428,33 @@ connect_bd_net [get_bd_pins zero8/dout]                              [get_bd_pin
 connect_bd_net [get_bd_pins cordic_source_adapter_0/source_q313]     [get_bd_pins status_concat/In9]
 connect_bd_net [get_bd_pins status_concat/dout] [get_bd_pins axi_gpio_status/gpio2_io_i]
 
+# ---- axi_gpio_motion (M02) — moving source velocity + speed throttle ----
+#   CH1 out: {vy[31:16], vx[15:0]}  (signed, 1/256 cells per iteration)
+#   CH2 out: {speed_div[31:8], 7'b0, move_en[0]}
+create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_motion
+set_property -dict [list CONFIG.C_GPIO_WIDTH {32} CONFIG.C_GPIO2_WIDTH {32} \
+    CONFIG.C_ALL_OUTPUTS {1} CONFIG.C_ALL_OUTPUTS_2 {1} CONFIG.C_IS_DUAL {1}] [get_bd_cells axi_gpio_motion]
+connect_bd_net $FCLK     [get_bd_pins axi_gpio_motion/s_axi_aclk]
+connect_bd_net $PS_ARSTN [get_bd_pins axi_gpio_motion/s_axi_aresetn]
+connect_bd_intf_net [get_bd_intf_pins axi_ic_0/M02_AXI] [get_bd_intf_pins axi_gpio_motion/S_AXI]
+make_slice slice_vx        15 0  32
+make_slice slice_vy        31 16 32
+connect_bd_net [get_bd_pins axi_gpio_motion/gpio_io_o] [get_bd_pins slice_vx/Din] [get_bd_pins slice_vy/Din]
+make_slice slice_move_en    0 0  32
+make_slice slice_speed_div 31 8  32
+connect_bd_net [get_bd_pins axi_gpio_motion/gpio2_io_o] [get_bd_pins slice_move_en/Din] [get_bd_pins slice_speed_div/Din]
+connect_bd_net [get_bd_pins slice_vx/Dout]        [get_bd_pins fdtd_quad_0/vx]
+connect_bd_net [get_bd_pins slice_vy/Dout]        [get_bd_pins fdtd_quad_0/vy]
+connect_bd_net [get_bd_pins slice_move_en/Dout]   [get_bd_pins fdtd_quad_0/move_en]
+connect_bd_net [get_bd_pins slice_speed_div/Dout] [get_bd_pins fdtd_quad_0/speed_div]
+
 # ---------------------------------------------------------------------------
 #  Address map (single source -> no gpio_src this build)
 # ---------------------------------------------------------------------------
 assign_bd_address
 catch { set_property offset 0x41200000 [get_bd_addr_segs {axi_gpio_ctrl/S_AXI/Reg}] }
-catch { set_property offset 0x41210000 [get_bd_addr_segs {axi_gpio_status/S_AXI/Reg}] }
+catch { set_property offset 0x41220000 [get_bd_addr_segs {axi_gpio_status/S_AXI/Reg}] }
+catch { set_property offset 0x41210000 [get_bd_addr_segs {axi_gpio_motion/S_AXI/Reg}] }
 
 # ---------------------------------------------------------------------------
 #  Finalise

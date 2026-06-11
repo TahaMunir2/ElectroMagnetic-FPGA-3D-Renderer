@@ -13,38 +13,38 @@ module pml #(
         case (d)
             0: begin
                 ca = 16'sd8192;
-                cb_e = -16'sd6;
-                cb_bz = -16'sd6;
+                cb_e = -16'sd717;
+                cb_bz = -16'sd717;
             end
             1: begin
-                ca = 16'sd8191;
-                cb_e = -16'sd6;
-                cb_bz = -16'sd6;
+                ca = 16'sd8174;
+                cb_e = -16'sd717;
+                cb_bz = -16'sd717;
             end
             2: begin
-                ca = 16'sd8184;
-                cb_e = -16'sd6;
-                cb_bz = -16'sd6;
+                ca = 16'sd8045;
+                cb_e = -16'sd717;
+                cb_bz = -16'sd717;
             end
             3: begin
-                ca = 16'sd8165;
-                cb_e = -16'sd6;
-                cb_bz = -16'sd6;
+                ca = 16'sd7695;
+                cb_e = -16'sd717;
+                cb_bz = -16'sd717;
             end
             4: begin
-                ca = 16'sd8128;
-                cb_e = -16'sd6;
-                cb_bz = -16'sd6;
+                ca = 16'sd7014;
+                cb_e = -16'sd717;
+                cb_bz = -16'sd717;
             end
             5: begin
-                ca = 16'sd8067;
-                cb_e = -16'sd6;
-                cb_bz = -16'sd6;
+                ca = 16'sd5892;
+                cb_e = -16'sd717;
+                cb_bz = -16'sd717;
             end
             default: begin
                 ca = 16'sd8192;
-                cb_e = -16'sd6;
-                cb_bz = -16'sd6;
+                cb_e = -16'sd717;
+                cb_bz = -16'sd717;
             end
         endcase
     end

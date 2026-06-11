@@ -30,9 +30,14 @@ module ey #(
         ey_new         <= ey_ca_reg + ey_cb_reg;
     end
 
+    logic signed [2*FP_WIDTH:0] ey_ca_rounded;
+    logic signed [2*FP_WIDTH:0] ey_cb_rounded;
+
     assign ey_ca_untruncated = ca * ey_1_reg;
     assign ey_cb_untruncated = cb * difference_reg;
-    assign ey_ca_truncated   = $signed(ey_ca_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
-    assign ey_cb_truncated   = $signed(ey_cb_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign ey_ca_rounded     = ey_ca_untruncated + (1 <<< (FRAC_BITS-1));
+    assign ey_cb_rounded     = ey_cb_untruncated + (1 <<< (FRAC_BITS-1));
+    assign ey_ca_truncated   = $signed(ey_ca_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign ey_cb_truncated   = $signed(ey_cb_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
 
 endmodule

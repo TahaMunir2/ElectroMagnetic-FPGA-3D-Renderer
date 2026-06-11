@@ -17,7 +17,7 @@ module top_fdtd_hardware_wrapper (
     localparam int ADDR_WIDTH = 6;
 
     localparam logic [15:0] NUM_ITERATIONS = 16'd4;
-    localparam logic [15:0] PHASE_STEP = 16'h0005;
+    localparam logic [15:0] PHASE_STEP = 16'h01C2;
     localparam logic [2*ADDR_WIDTH-1:0] SOURCE_ADDR = 12'd2080;
     localparam logic [2*ADDR_WIDTH-1:0] PROBE_ADDR  = 12'd2080;
     logic [3:0] state_debug_unused;

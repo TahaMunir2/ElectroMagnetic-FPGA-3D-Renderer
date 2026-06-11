@@ -82,7 +82,7 @@ module tb_top_fdtd_hex_lane;
 
         source_in     = 16'sd8192;
         source_valid  = 1'b1;
-        source_addr   = 8 * COLUMNS + 8;
+        source_addr   = 16 * COLUMNS + 8;
         solver_enable = 1'b1;
 
         cycles_taken = 0;
@@ -92,12 +92,12 @@ module tb_top_fdtd_hex_lane;
             cycles_taken++;
         end
         cycles_taken++;
-        if (cycles_taken !== 2*GRID_SIZE) begin
+        if (cycles_taken !== 2*GRID_SIZE + 4) begin
             $display("wrong cycle count: %0d", cycles_taken);
             $finish;
         end
 
-        if ($signed(dut.bram_1.ey_mem_0[lflat(0, 8)]) == 0) begin
+        if ($signed(dut.bram_2.ey_mem_0[lflat(0, 8)]) == 0) begin
             $display("ey still zero after inject");
             $finish;
         end
@@ -165,12 +165,11 @@ module tb_top_fdtd_hex_lane;
         repeat(20) next_iter;
 
         nonzero_found = 1'b0;
-        for (row = 0; row < ROWS && !nonzero_found; row++)
-            for (col = 0; col < COLUMNS && !nonzero_found; col++)
-                if (dut.bram_2.ey_mem_0[lflat(row, col)] !== '0)
-                    nonzero_found = 1'b1;
+        for (col = 0; col < COLUMNS && !nonzero_found; col++)
+            if (dut.bram_1.bz_mem_0[lflat(ROWS-1, col)] !== '0)
+                nonzero_found = 1'b1;
         if (!nonzero_found) begin
-            $display("halo broken, lane 2 still zero");
+            $display("halo broken, lane 1 still zero");
             $finish;
         end
 

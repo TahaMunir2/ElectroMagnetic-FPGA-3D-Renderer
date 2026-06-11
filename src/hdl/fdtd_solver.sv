@@ -63,9 +63,11 @@ module fdtd_solver #(
 
     logic [CTR_BITS-1:0]  counter;
     logic [CTR_BITS-1:0]  phase_addr;
+    logic [CTR_BITS-1:0]  wr_counter;
     logic [ADDR_BITS-1:0] cell_addr;
     logic [ADDR_BITS-1:0] wr_cell;
     logic                 write_valid;
+    logic                 e_write_phase;
     logic        [CELL_WIDTH-1:0] row;
     logic        [CELL_WIDTH-1:0] column;
     logic        [CELL_WIDTH-1:0] wr_row;
@@ -138,8 +140,10 @@ module fdtd_solver #(
 always_comb begin
     if (counter < GRID_SIZE) begin
         phase_addr = counter;
-    end else begin
+    end else if (counter < TWO_GRID_SIZE) begin
         phase_addr = counter - GRID_SIZE;
+    end else begin
+        phase_addr = '0;
     end
 
     cell_addr   = phase_addr;
@@ -148,8 +152,13 @@ always_comb begin
     current_row = row;
     current_col = column;
     e_phase     = (counter >= GRID_SIZE);
-    write_valid = (cell_addr >= 4);
-    wr_cell     = write_valid ? (cell_addr - 3'd4) : '0;
+
+    wr_counter    = counter - 3'd4;
+    write_valid   = (counter >= 4);
+    e_write_phase = write_valid && (wr_counter < GRID_SIZE);
+    if (!write_valid)       wr_cell = '0;
+    else if (e_write_phase) wr_cell = wr_counter;
+    else                    wr_cell = wr_counter - GRID_SIZE;
     wr_row      = (wr_cell / COLUMNS) + ROW_OFFSET;
     wr_column   = wr_cell - (wr_cell / COLUMNS) * COLUMNS;
 
@@ -217,9 +226,9 @@ always_ff @(posedge clk) begin
     if (rst || !solver_enable) begin
         counter <= '0;
     end else begin
-        if (counter == TWO_GRID_SIZE - 1) solver_done <= 1'b1;
+        if (counter == TWO_GRID_SIZE + 3) solver_done <= 1'b1;
 
-        if (counter < GRID_SIZE) begin
+        if (e_write_phase) begin
             ey_we <= write_valid;
             ex_we <= write_valid;
             if (wr_row == 0 || wr_row == TOTAL_ROWS-1) ey_wr_data <= '0;
@@ -232,7 +241,7 @@ always_ff @(posedge clk) begin
             bz_wr_data <= engine_bz_new;
         end
 
-        if (counter < TWO_GRID_SIZE) counter <= counter + 1'b1;
+        if (counter < TWO_GRID_SIZE + 4) counter <= counter + 1'b1;
 
     end
 end

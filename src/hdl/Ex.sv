@@ -30,9 +30,14 @@ module ex #(
         ex_new         <= ex_ca_reg - ex_cb_reg;
     end
 
+    logic signed [2*FP_WIDTH:0] ex_ca_rounded;
+    logic signed [2*FP_WIDTH:0] ex_cb_rounded;
+
     assign ex_ca_untruncated = ca * ex_1_reg;
     assign ex_cb_untruncated = cb * difference_reg;
-    assign ex_ca_truncated   = $signed(ex_ca_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
-    assign ex_cb_truncated   = $signed(ex_cb_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign ex_ca_rounded     = ex_ca_untruncated + (1 <<< (FRAC_BITS-1));
+    assign ex_cb_rounded     = ex_cb_untruncated + (1 <<< (FRAC_BITS-1));
+    assign ex_ca_truncated   = $signed(ex_ca_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign ex_cb_truncated   = $signed(ex_cb_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
 
 endmodule

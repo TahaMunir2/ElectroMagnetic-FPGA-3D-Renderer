@@ -69,9 +69,11 @@
 #define PIN_UART_RX 16
 #define UART_BAUD 115200
 
-// ---------- debug ----------
-#define DEBUG     1        // 1 = print live readings to the USB Serial Monitor
-#define DEBUG_MS  200
+// ---------- USB serial output for PYNQ ----------
+// 1 = print one readable, line-based DATA record on USB Serial for PYNQ.
+// Lines that do not start with "DATA," are boot/calibration messages and can be ignored.
+#define USB_PYNQ_TEXT     1
+#define USB_PYNQ_TEXT_MS 20       // 20 ms = ~50 Hz. Increase to 50/100 for slower logging.
 
 // ---------- filtering / calibration ----------
 #define SETTLE_MS   6
@@ -259,14 +261,31 @@ void loop() {
   uint8_t cks = 0; for (int i = 1; i <= 19; i++) cks ^= buf[i]; buf[20] = cks;
   Serial2.write(buf, sizeof(buf));
 
-#if DEBUG
-  static uint32_t dbg = 0;
-  if (millis() - dbg >= DEBUG_MS) {
-    dbg = millis();
-    Serial.printf("M%d %s touch=%d sense=%4d | rawX=%5d rawY=%5d mV  full(%4d,%4d) -> grid X=%2d Y=%2d | cal X[%d..%d] Y[%d..%d]\n",
-                  mode2 ? 2 : 1, threeD ? "3D" : "2D", touched, sense, rx, ry, xf, yf, gx, gy, xMin, xMax, yMin, yMax);
-    Serial.printf("    amp=%4d cond=%4d field=%d yaw=%4d pitch=%4d zoom=%4d zscale=%4d | wall=%d clr=%d probe=%4d\n",
-                  amp, cond, fieldType, yaw, pitch, zoom, zscale, wall, clear, probe);
+#if USB_PYNQ_TEXT
+  static uint32_t usbText = 0;
+  if (millis() - usbText >= USB_PYNQ_TEXT_MS) {
+    usbText = millis();
+    Serial.printf(
+      "DATA,mode=%d,view=%d,touch=%d,x=%d,y=%d,amp=%d,cond=%d,field=%d,wall=%d,clear=%d,probe=%d,yaw=%d,pitch=%d,zoom=%d,zscale=%d,sense=%d,rawx=%d,rawy=%d\n",
+      mode2 ? 2 : 1,
+      threeD ? 3 : 2,
+      touched ? 1 : 0,
+      gx,
+      gy,
+      amp,
+      cond,
+      fieldType,
+      wall ? 1 : 0,
+      clear ? 1 : 0,
+      probe,
+      yaw,
+      pitch,
+      zoom,
+      zscale,
+      sense,
+      rx,
+      ry
+    );
   }
 #endif
 

@@ -445,14 +445,16 @@ make_slice slice_vy        31 16 32
 connect_bd_net [get_bd_pins axi_gpio_motion/gpio_io_o] [get_bd_pins slice_vx/Din] [get_bd_pins slice_vy/Din]
 make_slice slice_move_en    0 0  32
 make_slice slice_dcfree     1 1  32
+make_slice slice_src_bz     2 2  32
 make_slice slice_speed_div 31 8  32
 connect_bd_net [get_bd_pins axi_gpio_motion/gpio2_io_o] [get_bd_pins slice_move_en/Din] \
-    [get_bd_pins slice_dcfree/Din] [get_bd_pins slice_speed_div/Din]
+    [get_bd_pins slice_dcfree/Din] [get_bd_pins slice_src_bz/Din] [get_bd_pins slice_speed_div/Din]
 connect_bd_net [get_bd_pins slice_vx/Dout]        [get_bd_pins fdtd_quad_0/vx]
 connect_bd_net [get_bd_pins slice_vy/Dout]        [get_bd_pins fdtd_quad_0/vy]
 connect_bd_net [get_bd_pins slice_move_en/Dout]   [get_bd_pins fdtd_quad_0/move_en]
 connect_bd_net [get_bd_pins slice_speed_div/Dout] [get_bd_pins fdtd_quad_0/speed_div]
 connect_bd_net [get_bd_pins slice_dcfree/Dout]    [get_bd_pins cordic_source_adapter_0/src_dcfree]
+connect_bd_net [get_bd_pins slice_src_bz/Dout]    [get_bd_pins fdtd_quad_0/source_bz]
 
 # ---------------------------------------------------------------------------
 #  Address map (single source -> no gpio_src this build)

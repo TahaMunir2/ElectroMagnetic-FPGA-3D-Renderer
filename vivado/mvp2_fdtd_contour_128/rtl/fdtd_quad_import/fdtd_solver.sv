@@ -17,6 +17,8 @@ module fdtd_solver #(
     input  wire [DATA_WIDTH-1:0] source_in,
     input  wire                  source_valid,
     input  wire [2*CELL_WIDTH-1:0]  source_addr,
+    input  wire                  source_bz,   // 0 = inject into Ey (dipole),
+                                              // 1 = inject into Bz (monopole/isotropic)
     output logic [2*CELL_WIDTH-1:0] ey_rd_addr,
     input  wire  [DATA_WIDTH-1:0]   ey_rd_dout,
     output logic [2*CELL_WIDTH-1:0] ey_wr_addr,
@@ -237,13 +239,16 @@ always_ff @(posedge clk) begin
             ey_we <= write_valid;
             ex_we <= write_valid;
             if (wr_row == 0 || wr_row == TOTAL_ROWS-1) ey_wr_data <= '0;
-            else if (source_valid && wr_cell == source_addr) ey_wr_data <= sat_inj(engine_ey_new, source_in);
+            else if (!source_bz && source_valid && wr_cell == source_addr)
+                ey_wr_data <= sat_inj(engine_ey_new, source_in);  // dipole (Ey) source
             else ey_wr_data <= engine_ey_new;
             if (wr_column == 0 || wr_column == COLUMNS-1) ex_wr_data <= '0;
             else ex_wr_data <= engine_ex_new;
         end else begin
             bz_we      <= write_valid;
-            bz_wr_data <= engine_bz_new;
+            if (source_bz && source_valid && wr_cell == source_addr)
+                bz_wr_data <= sat_inj(engine_bz_new, source_in);  // monopole (Bz) source
+            else bz_wr_data <= engine_bz_new;
         end
 
         if (counter < TWO_GRID_SIZE) counter <= counter + 1'b1;

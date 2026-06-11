@@ -46,6 +46,8 @@ module fdtd_quad_bd_adapter #(
     input  wire                    move_en,
     input  wire signed [15:0]      vx,
     input  wire signed [15:0]      vy,
+    // source field select: 0 = Ey (dipole), 1 = Bz (monopole / isotropic ripples)
+    input  wire                    source_bz,
 
     // status
     output wire                    solver_done,
@@ -198,6 +200,7 @@ module fdtd_quad_bd_adapter #(
         .source_in(held_source_q313),
         .source_valid(held_source_valid),
         .source_addr(source_addr_eff),
+        .source_bz(source_bz),
         .solver_enable(solver_enable_core),
         .solver_done(solver_done),
         .mag_active(mag_active),

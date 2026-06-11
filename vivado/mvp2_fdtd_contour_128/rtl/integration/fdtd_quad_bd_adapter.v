@@ -34,6 +34,12 @@ module fdtd_quad_bd_adapter #(
     input  wire [1:0]              mag_mode,
     input  wire                    clear_req,
 
+    // CORDIC sample request: in free-run we re-time it to ONE pulse per solver
+    // iteration (so the source advances exactly phase_step per injection and the
+    // DC-free first-difference telescopes correctly). Else pass the PS level.
+    input  wire                    ext_sample_req,
+    output wire                    sample_pulse,
+
     // Simulation-speed throttle: extra idle cycles inserted between iterations.
     input  wire [23:0]             speed_div,
     // Moving source (Doppler / Mach cone): velocity in 1/256 cells per iteration.
@@ -124,6 +130,15 @@ module fdtd_quad_bd_adapter #(
 
     // one pulse per completed iteration (magnitude done) — drives source motion
     wire iter_done = (fr_state == S_WAITMAG) && md_done;
+
+    // re-time the CORDIC sample request to one pulse per solver iteration (on
+    // solve completion), so phase advances exactly phase_step per injection.
+    // The CORDIC then computes the next sample during WAITMAG/THROTTLE, ready
+    // well before the next solve's counter==0 latch.
+    reg solver_done_d;
+    always @(posedge clk) solver_done_d <= rst ? 1'b0 : solver_done;
+    wire iter_sample = solver_done & ~solver_done_d;
+    assign sample_pulse = free_run ? iter_sample : ext_sample_req;
 
     // ---- moving source (Doppler): position accumulator, bounce off PML walls ----
     localparam integer FRAC = 8;

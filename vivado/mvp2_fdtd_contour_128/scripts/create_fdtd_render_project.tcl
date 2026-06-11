@@ -390,7 +390,10 @@ connect_bd_net [get_bd_pins axi_gpio_ctrl/gpio2_io_o] \
 connect_bd_net [get_bd_pins slice_source_addr/Dout] [get_bd_pins fdtd_quad_0/source_addr]
 connect_bd_net [get_bd_pins slice_solver_en/Dout]   [get_bd_pins fdtd_quad_0/solver_enable]
 connect_bd_net [get_bd_pins slice_free_run/Dout]    [get_bd_pins fdtd_quad_0/free_run]
-connect_bd_net [get_bd_pins slice_sample_req/Dout]  [get_bd_pins cordic_source_adapter_0/sample_req]
+# sample_req is re-timed inside the FDTD adapter to one pulse per solver
+# iteration (free-run); the PS level feeds ext_sample_req, the pulse drives CORDIC
+connect_bd_net [get_bd_pins slice_sample_req/Dout]  [get_bd_pins fdtd_quad_0/ext_sample_req]
+connect_bd_net [get_bd_pins fdtd_quad_0/sample_pulse] [get_bd_pins cordic_source_adapter_0/sample_req]
 connect_bd_net [get_bd_pins slice_height_ctl/Dout]  [get_bd_pins bridge_0/height_ctl]
 connect_bd_net [get_bd_pins slice_clear_req/Dout]   [get_bd_pins fdtd_quad_0/clear_req]
 # mag_mode is 2-bit: {bit21, bit13} -> 0=|E|, 1=|S|, 2=raw signed Ey (wave)

@@ -75,12 +75,14 @@ module fdtd_solver #(
     localparam GRID_SIZE     = ROWS * COLUMNS;
     localparam TWO_GRID_SIZE = 2 * GRID_SIZE;
     localparam ADDR_BITS     = $clog2(GRID_SIZE) + 1;
-    localparam CTR_BITS      = $clog2(TWO_GRID_SIZE) + 1;
+    localparam CTR_BITS      = $clog2(TWO_GRID_SIZE) + 2;  // +drain headroom
 
     logic [CTR_BITS-1:0]  counter;
     logic [CTR_BITS-1:0]  phase_addr;
     logic [ADDR_BITS-1:0] cell_addr;
     logic [ADDR_BITS-1:0] wr_cell;
+    logic [CTR_BITS-1:0]  wr_ctr;     // global write index = counter-4
+    logic                 wr_is_e;    // write target is an E (Ey/Ex) cell
     logic                 write_valid;
     logic        [CELL_WIDTH-1:0] row;
     logic        [CELL_WIDTH-1:0] column;
@@ -154,8 +156,10 @@ module fdtd_solver #(
 always_comb begin
     if (counter < GRID_SIZE) begin
         phase_addr = counter;
-    end else begin
+    end else if (counter < TWO_GRID_SIZE) begin
         phase_addr = counter - GRID_SIZE;
+    end else begin
+        phase_addr = GRID_SIZE - 1;          // drain cycles: keep read addr in range
     end
 
     cell_addr   = phase_addr;
@@ -164,8 +168,17 @@ always_comb begin
     current_row = row;
     current_col = column;
     e_phase     = (counter >= GRID_SIZE);
-    write_valid = (cell_addr >= 4);
-    wr_cell     = write_valid ? (cell_addr - 3'd4) : '0;
+
+    // Global write index: the cell whose 4-stage pipeline result is ready this
+    // cycle (= cell read 4 cycles ago). Mid-phase this equals the old
+    // cell_addr-4, but it stays correct ACROSS the phase boundary and through a
+    // 4-cycle drain, so the final 4 cells of each phase get written (the old
+    // code dropped them) and the PML coeff stays aligned at the seam.
+    wr_ctr      = counter - 4;
+    write_valid = (counter >= 4) && (counter < TWO_GRID_SIZE + 4);
+    wr_is_e     = (wr_ctr < GRID_SIZE);
+    wr_cell     = !write_valid ? '0 : (wr_is_e ? wr_ctr[ADDR_BITS-1:0]
+                                                : (wr_ctr - GRID_SIZE));
     wr_row      = (wr_cell / COLUMNS) + ROW_OFFSET;
     wr_column   = wr_cell - (wr_cell / COLUMNS) * COLUMNS;
 
@@ -233,9 +246,9 @@ always_ff @(posedge clk) begin
     if (rst || !solver_enable) begin
         counter <= '0;
     end else begin
-        if (counter == TWO_GRID_SIZE - 1) solver_done <= 1'b1;
+        if (counter == TWO_GRID_SIZE + 4) solver_done <= 1'b1;
 
-        if (counter < GRID_SIZE) begin
+        if (wr_is_e) begin
             ey_we <= write_valid;
             ex_we <= write_valid;
             if (wr_row == 0 || wr_row == TOTAL_ROWS-1) ey_wr_data <= '0;
@@ -251,7 +264,7 @@ always_ff @(posedge clk) begin
             else bz_wr_data <= engine_bz_new;
         end
 
-        if (counter < TWO_GRID_SIZE) counter <= counter + 1'b1;
+        if (counter < TWO_GRID_SIZE + 4) counter <= counter + 1'b1;
 
     end
 end

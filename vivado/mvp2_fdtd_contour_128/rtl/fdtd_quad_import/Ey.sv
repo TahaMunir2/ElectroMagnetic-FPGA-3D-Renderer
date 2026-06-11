@@ -39,9 +39,15 @@ module ey #(
                               + $signed({ey_cb_reg[FP_WIDTH-1], ey_cb_reg}));
     end
 
+    // round-to-nearest before the Q3.13 renormalise (add half an LSB). A bare
+    // slice floors toward -inf, injecting a sign-biased ~0.5 LSB error every
+    // multiply; with interior ca=1.0 there is no loss to absorb it so the bias
+    // accumulates into a DC residue. Half-LSB rounding makes it unbiased.
+    wire signed [2*FP_WIDTH:0] ey_ca_rounded = ey_ca_untruncated + (1 <<< (FRAC_BITS-1));
+    wire signed [2*FP_WIDTH:0] ey_cb_rounded = ey_cb_untruncated + (1 <<< (FRAC_BITS-1));
     assign ey_ca_untruncated = ca * ey_1_reg;
     assign ey_cb_untruncated = cb * difference_reg;
-    assign ey_ca_truncated   = $signed(ey_ca_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
-    assign ey_cb_truncated   = $signed(ey_cb_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign ey_ca_truncated   = $signed(ey_ca_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign ey_cb_truncated   = $signed(ey_cb_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
 
 endmodule

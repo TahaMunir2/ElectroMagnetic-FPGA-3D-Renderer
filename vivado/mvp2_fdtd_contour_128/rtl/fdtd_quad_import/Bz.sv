@@ -41,9 +41,12 @@ module bz #(
                               + $signed({bz_cb_reg[FP_WIDTH-1], bz_cb_reg}));
     end
 
+    // round-to-nearest before the Q3.13 renormalise (see Ey.sv for rationale)
+    wire signed [2*FP_WIDTH:0] bz_ca_rounded = bz_ca_untruncated + (1 <<< (FRAC_BITS-1));
+    wire signed [2*FP_WIDTH:0] bz_cb_rounded = bz_cb_untruncated + (1 <<< (FRAC_BITS-1));
     assign bz_ca_untruncated = ca * bz_1_reg;
     assign bz_cb_untruncated = cb * difference_reg;
-    assign bz_ca_truncated   = $signed(bz_ca_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
-    assign bz_cb_truncated   = $signed(bz_cb_untruncated[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign bz_ca_truncated   = $signed(bz_ca_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
+    assign bz_cb_truncated   = $signed(bz_cb_rounded[FRAC_BITS+FP_WIDTH-1:FRAC_BITS]);
 
 endmodule

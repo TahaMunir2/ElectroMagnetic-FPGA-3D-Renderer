@@ -22,12 +22,21 @@ module ey #(
     logic signed [FP_WIDTH-1:0] ey_ca_reg;
     logic signed [FP_WIDTH-1:0] ey_cb_reg;
 
+    // hard ±full-scale clamp (saturate, don't wrap) on the field update
+    localparam signed [FP_WIDTH:0] MAXV =  (1 << (FP_WIDTH-1)) - 1;
+    localparam signed [FP_WIDTH:0] MINV = -(1 << (FP_WIDTH-1));
+    function automatic logic signed [FP_WIDTH-1:0] sat17 (input logic signed [FP_WIDTH:0] s);
+        sat17 = (s > MAXV) ? MAXV[FP_WIDTH-1:0] :
+                (s < MINV) ? MINV[FP_WIDTH-1:0] : s[FP_WIDTH-1:0];
+    endfunction
+
     always_ff @(posedge clk) begin
         difference_reg <= bz_right - bz_left;
         ey_1_reg       <= ey_old;
         ey_ca_reg      <= ey_ca_truncated;
         ey_cb_reg      <= ey_cb_truncated;
-        ey_new         <= ey_ca_reg + ey_cb_reg;
+        ey_new         <= sat17($signed({ey_ca_reg[FP_WIDTH-1], ey_ca_reg})
+                              + $signed({ey_cb_reg[FP_WIDTH-1], ey_cb_reg}));
     end
 
     assign ey_ca_untruncated = ca * ey_1_reg;

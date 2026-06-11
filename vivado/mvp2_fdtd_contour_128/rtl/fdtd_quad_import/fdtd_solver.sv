@@ -51,6 +51,20 @@ module fdtd_solver #(
     logic signed [DATA_WIDTH-1:0] engine_ex_right;
     logic signed [DATA_WIDTH-1:0] engine_ey_left;
     wire  signed [DATA_WIDTH-1:0] engine_ey_new;
+
+    // saturating source injection: clamp engine_ey_new + source_in to ±full
+    // scale so a strong/moving source can never overflow-wrap the field.
+    localparam signed [DATA_WIDTH:0] INJ_MAX =  (1 << (DATA_WIDTH-1)) - 1;
+    localparam signed [DATA_WIDTH:0] INJ_MIN = -(1 << (DATA_WIDTH-1));
+    function automatic logic signed [DATA_WIDTH-1:0] sat_inj
+        (input logic signed [DATA_WIDTH-1:0] a, input logic signed [DATA_WIDTH-1:0] b);
+        logic signed [DATA_WIDTH:0] s;
+        begin
+            s = $signed({a[DATA_WIDTH-1], a}) + $signed({b[DATA_WIDTH-1], b});
+            sat_inj = (s > INJ_MAX) ? INJ_MAX[DATA_WIDTH-1:0] :
+                      (s < INJ_MIN) ? INJ_MIN[DATA_WIDTH-1:0] : s[DATA_WIDTH-1:0];
+        end
+    endfunction
     wire  signed [DATA_WIDTH-1:0] engine_ex_new;
     wire  signed [DATA_WIDTH-1:0] engine_bz_new;
     logic signed [DATA_WIDTH-1:0] prev_bz;
@@ -223,7 +237,7 @@ always_ff @(posedge clk) begin
             ey_we <= write_valid;
             ex_we <= write_valid;
             if (wr_row == 0 || wr_row == TOTAL_ROWS-1) ey_wr_data <= '0;
-            else if (source_valid && wr_cell == source_addr) ey_wr_data <= engine_ey_new + source_in;
+            else if (source_valid && wr_cell == source_addr) ey_wr_data <= sat_inj(engine_ey_new, source_in);
             else ey_wr_data <= engine_ey_new;
             if (wr_column == 0 || wr_column == COLUMNS-1) ex_wr_data <= '0;
             else ex_wr_data <= engine_ex_new;

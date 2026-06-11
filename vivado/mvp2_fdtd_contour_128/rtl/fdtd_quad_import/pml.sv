@@ -11,10 +11,10 @@ module pml #(
 
     always_comb begin
         case (d)
-            0: begin 
-                ca = 16'sd8192; 
-                cb_e = -16'sd717;  
-                cb_bz = -16'sd2867; 
+            0: begin
+                ca = 16'sd8160;    // interior: tiny loss (~0.4%/iter) for passivity
+                cb_e = -16'sd717;   // -> bleeds off accumulation/static residue so the
+                cb_bz = -16'sd2867; // background stays clean (was 8192 = lossless)
             end
             1: begin
                 ca = 16'sd7862;

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Thu Jun 11 12:52:46 2026" VIVADOVERSION="2023.2">
+<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Thu Jun 11 13:52:51 2026" VIVADOVERSION="2023.2">
 
   <SYSTEMINFO ARCH="zynq" DEVICE="7z020" NAME="fdtd_hdmi_bd" PACKAGE="clg400" SPEEDGRADE="-1"/>
 
@@ -761,6 +761,7 @@
         <PORT DIR="O" LEFT="31" NAME="gpio2_io_o" RIGHT="0" SIGIS="undef" SIGNAME="axi_gpio_motion_gpio2_io_o">
           <CONNECTIONS>
             <CONNECTION INSTANCE="slice_move_en" PORT="Din"/>
+            <CONNECTION INSTANCE="slice_dcfree" PORT="Din"/>
             <CONNECTION INSTANCE="slice_speed_div" PORT="Din"/>
           </CONNECTIONS>
         </PORT>
@@ -3119,6 +3120,11 @@
             <CONNECTION INSTANCE="status_concat" PORT="In1"/>
           </CONNECTIONS>
         </PORT>
+        <PORT DIR="I" NAME="src_dcfree" SIGIS="undef" SIGNAME="slice_dcfree_Dout">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="slice_dcfree" PORT="Dout"/>
+          </CONNECTIONS>
+        </PORT>
       </PORTS>
       <BUSINTERFACES>
         <BUSINTERFACE BUSNAME="__NOC__" NAME="m_axis_dout" TYPE="TARGET" VLNV="xilinx.com:interface:axis:1.0">
@@ -5351,6 +5357,30 @@
         <PORT DIR="O" LEFT="0" NAME="Dout" RIGHT="0" SIGIS="undef" SIGNAME="slice_clear_req_Dout">
           <CONNECTIONS>
             <CONNECTION INSTANCE="fdtd_quad_0" PORT="clear_req"/>
+          </CONNECTIONS>
+        </PORT>
+      </PORTS>
+      <BUSINTERFACES/>
+    </MODULE>
+    <MODULE COREREVISION="3" FULLNAME="/slice_dcfree" HWVERSION="1.0" INSTANCE="slice_dcfree" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="xlslice" VLNV="xilinx.com:ip:xlslice:1.0">
+      <DOCUMENTS/>
+      <PARAMETERS>
+        <PARAMETER NAME="DIN_FROM" VALUE="1"/>
+        <PARAMETER NAME="DIN_TO" VALUE="1"/>
+        <PARAMETER NAME="DIN_WIDTH" VALUE="32"/>
+        <PARAMETER NAME="Component_Name" VALUE="fdtd_hdmi_bd_slice_dcfree_0"/>
+        <PARAMETER NAME="DOUT_WIDTH" VALUE="1"/>
+        <PARAMETER NAME="EDK_IPTYPE" VALUE="PERIPHERAL"/>
+      </PARAMETERS>
+      <PORTS>
+        <PORT DIR="I" LEFT="31" NAME="Din" RIGHT="0" SIGIS="undef" SIGNAME="axi_gpio_motion_gpio2_io_o">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_gpio_motion" PORT="gpio2_io_o"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="0" NAME="Dout" RIGHT="0" SIGIS="undef" SIGNAME="slice_dcfree_Dout">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="cordic_source_adapter_0" PORT="src_dcfree"/>
           </CONNECTIONS>
         </PORT>
       </PORTS>

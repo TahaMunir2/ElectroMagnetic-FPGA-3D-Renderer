@@ -7,6 +7,13 @@ module cordic_source_adapter (
     input  wire               sample_req,
     input  wire signed [15:0] phase_step_q313,
     input  wire signed [15:0] amplitude_q313,
+    // 1 = inject the first-difference of the sine (DC-free) instead of the sine
+    // itself. A moving soft source dwelling on each cell deposits a net DC
+    // offset that, in a near-lossless grid, freezes into a static "trail";
+    // the first difference telescopes to a bounded value -> no trail. For a
+    // stationary source the grid re-integrates it to the same wave. The x4
+    // restores roughly the original amplitude at typical phase steps.
+    input  wire               src_dcfree,
 
     output reg  signed [15:0] source_q313,
     output reg                source_valid,
@@ -26,6 +33,7 @@ module cordic_source_adapter (
     reg signed [15:0] phase_acc_q313;
     wire signed [17:0] phase_sum;
     reg signed [15:0] phase_wrapped;
+    reg signed [31:0] prev_scaled;   // last emitted sample (for DC-free diff)
 
     wire signed [15:0] sin_fix16_14;
     wire signed [15:0] sin_q313;
@@ -67,6 +75,7 @@ module cordic_source_adapter (
             source_q313         <= 16'sd0;
             source_valid        <= 1'b0;
             busy                <= 1'b0;
+            prev_scaled         <= 32'sd0;
         end else begin
             s_axis_phase_tvalid <= 1'b0;
             source_valid        <= 1'b0;
@@ -79,7 +88,9 @@ module cordic_source_adapter (
             end
 
             if (busy && m_axis_dout_tvalid) begin
-                source_q313  <= sat16(scaled_q313);
+                source_q313  <= src_dcfree ? sat16((scaled_q313 - prev_scaled) <<< 2)
+                                           : sat16(scaled_q313);
+                prev_scaled  <= scaled_q313;
                 source_valid <= 1'b1;
                 busy         <= 1'b0;
             end

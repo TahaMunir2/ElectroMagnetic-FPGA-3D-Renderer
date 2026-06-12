@@ -41,8 +41,7 @@ module tb_cordic_generator;
         begin
             diff = actual - expected;
             if (abs_int(diff) > tolerance) begin
-                $display("CORDIC_FAIL %0s expected=%0d actual=%0d diff=%0d",
-                         label, expected, actual, diff);
+                $display("test failed: %0s expected=%0d actual=%0d", label, expected, actual);
                 fail = 1'b1;
             end
         end
@@ -55,18 +54,22 @@ module tb_cordic_generator;
                 1: begin
                     check_close($signed(sin_out), 16'sd8192, 16, "quarter sin");
                     check_close($signed(cos_out), 16'sd0, 16, "quarter cos");
+                    if (!fail) $display("test 1 passed: quarter turn sin=%0d cos=%0d", $signed(sin_out), $signed(cos_out));
                 end
                 2: begin
                     check_close($signed(sin_out), 16'sd0, 16, "half sin");
                     check_close($signed(cos_out), -16'sd8192, 16, "half cos");
+                    if (!fail) $display("test 2 passed: half turn sin=%0d cos=%0d", $signed(sin_out), $signed(cos_out));
                 end
                 3: begin
                     check_close($signed(sin_out), -16'sd8192, 16, "three_quarter sin");
                     check_close($signed(cos_out), 16'sd0, 16, "three_quarter cos");
+                    if (!fail) $display("test 3 passed: three quarter turn sin=%0d cos=%0d", $signed(sin_out), $signed(cos_out));
                 end
                 4: begin
                     check_close($signed(sin_out), 16'sd0, 16, "full sin");
                     check_close($signed(cos_out), 16'sd8192, 16, "full cos");
+                    if (!fail) $display("test 4 passed: full turn sin=%0d cos=%0d", $signed(sin_out), $signed(cos_out));
                 end
             endcase
         end
@@ -75,15 +78,11 @@ module tb_cordic_generator;
     always @(posedge clk) begin
         if (!rst && out_valid) begin
             sample_count = sample_count + 1;
-            $display("CORDIC_OUT sample=%0d sin=%0d cos=%0d",
-                     sample_count, $signed(sin_out), $signed(cos_out));
             check_sample(sample_count);
         end
     end
 
     initial begin
-        $display("CORDIC_TB_START");
-
         repeat (10) @(posedge clk);
         rst = 1'b0;
 
@@ -111,7 +110,7 @@ module tb_cordic_generator;
         repeat (40) @(posedge clk);
 
         if (sample_count != 4) begin
-            $display("CORDIC_FAIL expected 4 samples, got %0d", sample_count);
+            $display("test failed: expected 4 samples, got %0d", sample_count);
             $finish;
         end
 
@@ -119,8 +118,7 @@ module tb_cordic_generator;
             $finish;
         end
 
-        $display("CORDIC_PASS");
-        $display("CORDIC_TB_DONE");
+        $display("all 4 tests passed");
         $finish;
     end
 endmodule

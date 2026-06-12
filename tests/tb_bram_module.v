@@ -57,7 +57,7 @@ module tb_bram_module;
         input [8*40-1:0] label;
         begin
             if (actual !== expected) begin
-                $display("BRAM_FAIL %0s expected=%h actual=%h", label, expected, actual);
+                $display("test failed: %0s expected=%h actual=%h", label, expected, actual);
                 $finish;
             end
         end
@@ -104,6 +104,7 @@ module tb_bram_module;
         check_word(ey_rd_data_1, 16'h2222, "ey read port 1");
         check_word(bz_rd_data_0, 16'haaaa, "bz read port 0");
         check_word(bz_rd_data_1, 16'hbbbb, "bz read port 1");
+        $display("test 1 passed: write then read on both ports");
 
         @(negedge clk);
         ey_rd_addr_0 = 6'd7;
@@ -123,6 +124,7 @@ module tb_bram_module;
         check_word(ey_rd_data_1, 16'h3333, "ey same-cycle bypass port 1");
         check_word(bz_rd_data_0, 16'hcccc, "bz same-cycle bypass port 0");
         check_word(bz_rd_data_1, 16'hcccc, "bz same-cycle bypass port 1");
+        $display("test 2 passed: same-cycle write bypass");
 
         @(negedge clk);
         ey_we = 1'b0;
@@ -138,8 +140,9 @@ module tb_bram_module;
         check_word(ey_rd_data_1, 16'h0000, "ey zero init port 1");
         check_word(bz_rd_data_0, 16'h0000, "bz zero init port 0");
         check_word(bz_rd_data_1, 16'h0000, "bz zero init port 1");
+        $display("test 3 passed: memory zero initialised");
 
-        $display("BRAM_PASS");
+        $display("all 3 tests passed");
         $finish;
     end
 endmodule

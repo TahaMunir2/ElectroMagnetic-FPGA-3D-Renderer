@@ -91,48 +91,54 @@ module tb_top_fdtd_quad_lane;
         end
         cycles_taken++;
         if (cycles_taken !== 2*GRID_SIZE + 4) begin
-            $display("wrong cycle count: %0d", cycles_taken);
+            $display("test 1 failed: cycle count %0d", cycles_taken);
             $finish;
         end
+        $display("test 1 passed: iteration took %0d cycles", cycles_taken);
 
         if ($signed(dut.bram_1.ey_mem_0[lflat(0, 8)]) == 0) begin
-            $display("ey still zero after inject");
+            $display("test 2 failed: ey still zero after inject");
             $finish;
         end
+        $display("test 2 passed: source injected");
 
         for (col = 0; col < COLUMNS; col++) begin
             if (dut.bram_0.ey_mem_0[lflat(0, col)] !== '0) begin
-                $display("top boundary not zero at col %0d", col);
+                $display("test 3 failed: top boundary not zero at col %0d", col);
                 $finish;
             end
         end
+        $display("test 3 passed: top boundary clear");
 
         for (col = 0; col < COLUMNS; col++) begin
             if (dut.bram_3.ey_mem_0[lflat(ROWS-1, col)] !== '0) begin
-                $display("bottom boundary not zero at col %0d", col);
+                $display("test 4 failed: bottom boundary not zero at col %0d", col);
                 $finish;
             end
         end
+        $display("test 4 passed: bottom boundary clear");
 
         for (row = 0; row < ROWS; row++) begin
             if (dut.bram_0.ex_mem_0[lflat(row, 0)] !== '0 ||
                 dut.bram_1.ex_mem_0[lflat(row, 0)] !== '0 ||
                 dut.bram_2.ex_mem_0[lflat(row, 0)] !== '0 ||
                 dut.bram_3.ex_mem_0[lflat(row, 0)] !== '0) begin
-                $display("left boundary not zero at row %0d", row);
+                $display("test 5 failed: left boundary not zero at row %0d", row);
                 $finish;
             end
         end
+        $display("test 5 passed: left boundary clear");
 
         for (row = 0; row < ROWS; row++) begin
             if (dut.bram_0.ex_mem_0[lflat(row, COLUMNS-1)] !== '0 ||
                 dut.bram_1.ex_mem_0[lflat(row, COLUMNS-1)] !== '0 ||
                 dut.bram_2.ex_mem_0[lflat(row, COLUMNS-1)] !== '0 ||
                 dut.bram_3.ex_mem_0[lflat(row, COLUMNS-1)] !== '0) begin
-                $display("right boundary not zero at row %0d", row);
+                $display("test 6 failed: right boundary not zero at row %0d", row);
                 $finish;
             end
         end
+        $display("test 6 passed: right boundary clear");
 
         repeat(20) next_iter;
 
@@ -141,9 +147,10 @@ module tb_top_fdtd_quad_lane;
             if (dut.bram_0.bz_mem_0[lflat(ROWS-1, col)] !== '0)
                 nonzero_found = 1'b1;
         if (!nonzero_found) begin
-            $display("halo broken, lane 0 still zero");
+            $display("test 7 failed: halo broken, lane 0 still zero");
             $finish;
         end
+        $display("test 7 passed: wave crossed lane seam");
 
         @(negedge clk); solver_enable = 1'b0;
         @(posedge clk);
@@ -156,9 +163,10 @@ module tb_top_fdtd_quad_lane;
             cycles_taken++;
         end
         if (!solver_done) begin
-            $display("done didnt refire");
+            $display("test 8 failed: done didnt refire");
             $finish;
         end
+        $display("test 8 passed: done refires");
 
         solver_enable = 1'b1;
         repeat(100) @(posedge clk);
@@ -169,11 +177,12 @@ module tb_top_fdtd_quad_lane;
         solver_enable = 1'b0;
         repeat(10) @(posedge clk);
         if (solver_done) begin
-            $display("done still high after reset");
+            $display("test 9 failed: done still high after reset");
             $finish;
         end
+        $display("test 9 passed: reset clears state");
 
-        $display("ok");
+        $display("all 9 tests passed");
         $finish;
     end
 

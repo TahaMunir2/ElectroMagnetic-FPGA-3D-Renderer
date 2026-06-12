@@ -2,8 +2,8 @@
 
 module tb_fdtd_solver;
 
-    localparam CELLS      = 192;
-    localparam CELL_WIDTH = 8;
+    localparam CELLS      = 128;
+    localparam CELL_WIDTH = 7;
     localparam DATA_WIDTH = 16;
     localparam GRID       = CELLS * CELLS;
 
@@ -45,7 +45,12 @@ module tb_fdtd_solver;
     end
 
     fdtd_solver #(
-        .CELLS(CELLS),
+        .TOTAL_ROWS(CELLS),
+        .ROWS(CELLS),
+        .COLUMNS(CELLS),
+        .ROW_OFFSET(0),
+        .FIRST_LANE(1),
+        .LAST_LANE(1),
         .CELL_WIDTH(CELL_WIDTH),
         .DATA_WIDTH(DATA_WIDTH)
     ) dut (
@@ -74,7 +79,10 @@ module tb_fdtd_solver;
         .bz_adj_rd_addr(bz_adj_rd_addr),
         .bz_adj_dout(bz_adj_dout),
         .ey_adj_rd_addr(ey_adj_rd_addr),
-        .ey_adj_dout(ey_adj_dout)
+        .ey_adj_dout(ey_adj_dout),
+        .current_row(),
+        .current_col(),
+        .e_phase()
     );
 
     function automatic integer flat(input integer row, input integer col);
@@ -119,7 +127,7 @@ module tb_fdtd_solver;
         rst = 1'b0;
         repeat (2) @(posedge clk);
 
-        $display("TEST 1: solver_done timing");
+
         source_in     = 16'sd8192;
         source_valid  = 1'b1;
         solver_enable = 1'b1;
@@ -132,49 +140,46 @@ module tb_fdtd_solver;
         end
         cycles_taken = cycles_taken + 1;
 
-        $display("  solver_done after %0d cycles (expected %0d)", cycles_taken, 2*GRID);
-        if (cycles_taken !== 2*GRID) begin
-            $display("  FAIL");
+        if (cycles_taken !== 2*GRID + 4) begin
+            $display("test 1 failed: cycle count %0d", cycles_taken);
             $finish;
         end
-        $display("  PASS");
+        $display("test 1 passed: iteration took %0d cycles", cycles_taken);
 
-        $display("TEST 2: Ey source injection at (8,8)");
         ey_val = ey_mem[flat(8,8)];
-        $display("  Ey[8][8] = %0d", $signed(ey_val));
         if (ey_val == '0) begin
-            $display("  FAIL: Ey[8][8] still zero after source injection");
+            $display("test 2 failed: ey still zero after inject");
             $finish;
         end
-        $display("  PASS");
+        $display("test 2 passed: source injected, ey = %0d", $signed(ey_val));
 
-        $display("TEST 3: Ey boundary rows 0 and %0d forced zero", CELLS-1);
+
         for (col = 0; col < CELLS; col++) begin
             if (ey_mem[flat(0, col)] !== '0) begin
-                $display("  FAIL: Ey[0][%0d] = %0d", col, $signed(ey_mem[flat(0,col)]));
+                $display("test 3 failed: top boundary not zero at col %0d", col);
                 $finish;
             end
             if (ey_mem[flat(CELLS-1, col)] !== '0) begin
-                $display("  FAIL: Ey[%0d][%0d] = %0d", CELLS-1, col, $signed(ey_mem[flat(CELLS-1,col)]));
+                $display("test 3 failed: bottom boundary not zero at col %0d", col);
                 $finish;
             end
         end
-        $display("  PASS");
+        $display("test 3 passed: ey boundary rows clear");
 
-        $display("TEST 4: Ex boundary cols 0 and %0d forced zero", CELLS-1);
+
         for (row = 0; row < CELLS; row++) begin
             if (ex_mem[flat(row, 0)] !== '0) begin
-                $display("  FAIL: Ex[%0d][0] = %0d", row, $signed(ex_mem[flat(row,0)]));
+                $display("test 4 failed: left boundary not zero at row %0d", row);
                 $finish;
             end
             if (ex_mem[flat(row, CELLS-1)] !== '0) begin
-                $display("  FAIL: Ex[%0d][%0d] = %0d", row, CELLS-1, $signed(ex_mem[flat(row,CELLS-1)]));
+                $display("test 4 failed: right boundary not zero at row %0d", row);
                 $finish;
             end
         end
-        $display("  PASS");
+        $display("test 4 passed: ex boundary cols clear");
 
-        $display("TEST 5: second iteration triggers solver_done again");
+
         solver_enable = 1'b0;
         @(posedge clk);
         solver_enable = 1'b1;
@@ -186,13 +191,12 @@ module tb_fdtd_solver;
             cycles_taken = cycles_taken + 1;
         end
         if (!solver_done) begin
-            $display("  FAIL: solver_done did not fire (timeout after %0d cycles)", cycles_taken);
+            $display("test 5 failed: done didnt refire");
             $finish;
         end
-        $display("  solver_done fired after %0d cycles", cycles_taken);
-        $display("  PASS");
+        $display("test 5 passed: done refires");
 
-        $display("TEST 6: rst halts solver mid-run");
+
         solver_enable = 1'b1;
         repeat (100) @(posedge clk);
         rst = 1'b1;
@@ -202,12 +206,12 @@ module tb_fdtd_solver;
         solver_enable = 1'b0;
         repeat (10) @(posedge clk);
         if (ey_we || ex_we || bz_we) begin
-            $display("  FAIL: write enable asserted while solver disabled after rst");
+            $display("test 6 failed: writes still active after reset");
             $finish;
         end
-        $display("  PASS");
+        $display("test 6 passed: reset halts solver");
 
-        $display("TEST 7: PML damping (uniform ey=8192, bz=0)");
+
         for (int i = 0; i < GRID; i++) begin
             ey_mem[i] = 16'sd8192;
             ex_mem[i] = '0;
@@ -225,24 +229,22 @@ module tb_fdtd_solver;
 
         pml_val = ey_mem[flat(2, 96)];
         int_val = ey_mem[flat(10, 96)];
-        $display("  Ey[2][96]  (PML row, d=3) = %0d", $signed(pml_val));
-        $display("  Ey[10][96] (interior)     = %0d", $signed(int_val));
 
         if (int_val !== 16'sd8192) begin
-            $display("  FAIL: interior cell modified (expected 8192, got %0d)", $signed(int_val));
+            $display("test 7 failed: interior cell modified, got %0d", $signed(int_val));
             $finish;
         end
         if (int_val <= pml_val) begin
-            $display("  FAIL: PML cell not smaller than interior");
+            $display("test 7 failed: pml cell not attenuated");
             $finish;
         end
         if (ey_mem[flat(0, 96)] !== '0) begin
-            $display("  FAIL: boundary row 0 not zero after PML run");
+            $display("test 7 failed: boundary row not zero after pml run");
             $finish;
         end
-        $display("  PASS");
+        $display("test 7 passed: pml attenuates, interior untouched (pml=%0d interior=%0d)", $signed(pml_val), $signed(int_val));
 
-        $display("ALL TESTS PASSED");
+        $display("all 7 tests passed");
         $finish;
     end
 

@@ -514,13 +514,22 @@ cam_pack axi_gpio_cam_c gpio2_io_o up_y    up_z
 # ---------------------------------------------------------------------------
 #  Address map (single source -> no gpio_src this build)
 # ---------------------------------------------------------------------------
-assign_bd_address
-catch { set_property offset 0x41200000 [get_bd_addr_segs {axi_gpio_ctrl/S_AXI/Reg}] }
-catch { set_property offset 0x41220000 [get_bd_addr_segs {axi_gpio_status/S_AXI/Reg}] }
-catch { set_property offset 0x41210000 [get_bd_addr_segs {axi_gpio_motion/S_AXI/Reg}] }
-catch { set_property offset 0x41230000 [get_bd_addr_segs {axi_gpio_cam_a/S_AXI/Reg}] }
-catch { set_property offset 0x41240000 [get_bd_addr_segs {axi_gpio_cam_b/S_AXI/Reg}] }
-catch { set_property offset 0x41250000 [get_bd_addr_segs {axi_gpio_cam_c/S_AXI/Reg}] }
+# Assign each GPIO to a FIXED offset EXPLICITLY. Do NOT rely on a bare
+# assign_bd_address + set_property offset: bare assign_bd_address orders the
+# slaves ALPHABETICALLY, so adding cam_a/b/c (which sort before "ctrl") silently
+# shifted ctrl/motion/status down 3 slots and scrambled the whole notebook map.
+# assign_bd_address -offset places each segment deterministically (no collisions
+# since every offset is unique) and matches the notebook's hard-coded addresses.
+assign_bd_address -offset 0x41200000 -range 64K [get_bd_addr_segs {axi_gpio_ctrl/S_AXI/Reg}]
+assign_bd_address -offset 0x41210000 -range 64K [get_bd_addr_segs {axi_gpio_motion/S_AXI/Reg}]
+assign_bd_address -offset 0x41220000 -range 64K [get_bd_addr_segs {axi_gpio_status/S_AXI/Reg}]
+assign_bd_address -offset 0x41230000 -range 64K [get_bd_addr_segs {axi_gpio_cam_a/S_AXI/Reg}]
+assign_bd_address -offset 0x41240000 -range 64K [get_bd_addr_segs {axi_gpio_cam_b/S_AXI/Reg}]
+assign_bd_address -offset 0x41250000 -range 64K [get_bd_addr_segs {axi_gpio_cam_c/S_AXI/Reg}]
+assign_bd_address  ;# map any remaining segments (none expected) without disturbing the above
+# Report the resulting map for the build log (the explicit -offset calls above
+# are authoritative; this is just a record to cross-check against the notebook).
+catch { report_bd_address -file [file join $proj_dir reports addr_map.rpt] }
 
 # ---------------------------------------------------------------------------
 #  Finalise

@@ -3,6 +3,7 @@
   import Equation from "../components/Equation.svelte";
   import { mockReadouts } from "../lib/mockData.js";
   import CameraPanel from "../components/CameraPanel.svelte";
+  import PalettePanel from "../components/PalettePanel.svelte";
   import { setParam } from "../lib/connection.js";
 
   let live = false;
@@ -92,6 +93,7 @@
       </button>
     </div>
 
+    <PalettePanel />
     <CameraPanel />
     <HdmiPreview {live} />
 

@@ -363,12 +363,14 @@ connect_bd_net [get_bd_pins rgb2dvi_0/TMDS_Data_n] [get_bd_ports hdmi_tx_n]
 #  AXI interconnect: PS GP0 -> renderer camera + 2 GPIO
 # ---------------------------------------------------------------------------
 create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_ic_0
-set_property CONFIG.NUM_MI {3} [get_bd_cells axi_ic_0]
+set_property CONFIG.NUM_MI {6} [get_bd_cells axi_ic_0]
 connect_bd_net $FCLK [get_bd_pins axi_ic_0/ACLK] [get_bd_pins axi_ic_0/S00_ACLK] \
-    [get_bd_pins axi_ic_0/M00_ACLK] [get_bd_pins axi_ic_0/M01_ACLK] [get_bd_pins axi_ic_0/M02_ACLK]
+    [get_bd_pins axi_ic_0/M00_ACLK] [get_bd_pins axi_ic_0/M01_ACLK] [get_bd_pins axi_ic_0/M02_ACLK] \
+    [get_bd_pins axi_ic_0/M03_ACLK] [get_bd_pins axi_ic_0/M04_ACLK] [get_bd_pins axi_ic_0/M05_ACLK]
 connect_bd_net $IC_ARSTN [get_bd_pins axi_ic_0/ARESETN]
 connect_bd_net $PS_ARSTN [get_bd_pins axi_ic_0/S00_ARESETN] \
-    [get_bd_pins axi_ic_0/M00_ARESETN] [get_bd_pins axi_ic_0/M01_ARESETN] [get_bd_pins axi_ic_0/M02_ARESETN]
+    [get_bd_pins axi_ic_0/M00_ARESETN] [get_bd_pins axi_ic_0/M01_ARESETN] [get_bd_pins axi_ic_0/M02_ARESETN] \
+    [get_bd_pins axi_ic_0/M03_ARESETN] [get_bd_pins axi_ic_0/M04_ARESETN] [get_bd_pins axi_ic_0/M05_ARESETN]
 connect_bd_intf_net [get_bd_intf_pins ps7_0/M_AXI_GP0] [get_bd_intf_pins axi_ic_0/S00_AXI]
 
 # ---- axi_gpio_ctrl (M00) ----
@@ -467,6 +469,47 @@ connect_bd_net [get_bd_pins slice_move_en/Dout]   [get_bd_pins fdtd_quad_0/move_
 connect_bd_net [get_bd_pins slice_speed_div/Dout] [get_bd_pins fdtd_quad_0/speed_div]
 connect_bd_net [get_bd_pins slice_dcfree/Dout]    [get_bd_pins cordic_source_adapter_0/src_dcfree]
 connect_bd_net [get_bd_pins slice_src_bz/Dout]    [get_bd_pins fdtd_quad_0/source_bz]
+# cam_load strobe reuses a spare bit (bit3) of motion CH2 -> renderer camera latch
+make_slice slice_cam_load   3 3  32
+connect_bd_net [get_bd_pins axi_gpio_motion/gpio2_io_o] [get_bd_pins slice_cam_load/Din]
+connect_bd_net [get_bd_pins slice_cam_load/Dout]  [get_bd_pins renderer_0/cam_load]
+
+# ---------------------------------------------------------------------------
+#  Camera-basis GPIOs (M03/M04/M05) — PS computes the orthonormal basis in
+#  software and writes 12 signed Q3.13 vectors; the renderer latches them on
+#  cam_load.  Two 16-bit values packed per 32-bit channel:
+#    cam_a CH1 {oy,ox}      CH2 {fwd_x,oz}
+#    cam_b CH1 {fwd_z,fwd_y} CH2 {right_y,right_x}
+#    cam_c CH1 {up_x,right_z} CH2 {up_z,up_y}
+# ---------------------------------------------------------------------------
+proc make_cam_gpio {name fclk arstn ic mi} {
+    create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 $name
+    set_property -dict [list CONFIG.C_GPIO_WIDTH {32} CONFIG.C_GPIO2_WIDTH {32} \
+        CONFIG.C_ALL_OUTPUTS {1} CONFIG.C_ALL_OUTPUTS_2 {1} CONFIG.C_IS_DUAL {1}] [get_bd_cells $name]
+    connect_bd_net $fclk  [get_bd_pins $name/s_axi_aclk]
+    connect_bd_net $arstn [get_bd_pins $name/s_axi_aresetn]
+    connect_bd_intf_net [get_bd_intf_pins $ic/${mi}_AXI] [get_bd_intf_pins $name/S_AXI]
+}
+# slice a packed dual-GPIO and wire each 16-bit half to a renderer cam_* port.
+#   lo/hi are the renderer port base-names; ch is gpio_io_o (CH1) or gpio2_io_o (CH2)
+proc cam_pack {gpio ch lo_port hi_port} {
+    set s_lo "slice_cam_${lo_port}"
+    set s_hi "slice_cam_${hi_port}"
+    make_slice $s_lo 15 0  32
+    make_slice $s_hi 31 16 32
+    connect_bd_net [get_bd_pins $gpio/$ch] [get_bd_pins $s_lo/Din] [get_bd_pins $s_hi/Din]
+    connect_bd_net [get_bd_pins $s_lo/Dout] [get_bd_pins renderer_0/cam_${lo_port}]
+    connect_bd_net [get_bd_pins $s_hi/Dout] [get_bd_pins renderer_0/cam_${hi_port}]
+}
+make_cam_gpio axi_gpio_cam_a $FCLK $PS_ARSTN axi_ic_0 M03
+make_cam_gpio axi_gpio_cam_b $FCLK $PS_ARSTN axi_ic_0 M04
+make_cam_gpio axi_gpio_cam_c $FCLK $PS_ARSTN axi_ic_0 M05
+cam_pack axi_gpio_cam_a gpio_io_o  ox      oy
+cam_pack axi_gpio_cam_a gpio2_io_o oz      fwd_x
+cam_pack axi_gpio_cam_b gpio_io_o  fwd_y   fwd_z
+cam_pack axi_gpio_cam_b gpio2_io_o right_x right_y
+cam_pack axi_gpio_cam_c gpio_io_o  right_z up_x
+cam_pack axi_gpio_cam_c gpio2_io_o up_y    up_z
 
 # ---------------------------------------------------------------------------
 #  Address map (single source -> no gpio_src this build)
@@ -475,6 +518,9 @@ assign_bd_address
 catch { set_property offset 0x41200000 [get_bd_addr_segs {axi_gpio_ctrl/S_AXI/Reg}] }
 catch { set_property offset 0x41220000 [get_bd_addr_segs {axi_gpio_status/S_AXI/Reg}] }
 catch { set_property offset 0x41210000 [get_bd_addr_segs {axi_gpio_motion/S_AXI/Reg}] }
+catch { set_property offset 0x41230000 [get_bd_addr_segs {axi_gpio_cam_a/S_AXI/Reg}] }
+catch { set_property offset 0x41240000 [get_bd_addr_segs {axi_gpio_cam_b/S_AXI/Reg}] }
+catch { set_property offset 0x41250000 [get_bd_addr_segs {axi_gpio_cam_c/S_AXI/Reg}] }
 
 # ---------------------------------------------------------------------------
 #  Finalise
@@ -495,7 +541,8 @@ puts ""
 puts "INFO: ============================================================"
 puts "INFO: create_fdtd_render_project.tcl complete."
 puts "INFO: BD: $bd_name  (top ${bd_name}_wrapper)"
-puts "INFO: AXI: renderer 0x40000000 | gpio_ctrl 0x41200000 | gpio_status 0x41210000"
+puts "INFO: AXI: ctrl 0x41200000 | motion 0x41210000 | status 0x41220000"
+puts "INFO:      cam_a 0x41230000 | cam_b 0x41240000 | cam_c 0x41250000 (camera basis)"
 puts "INFO: ============================================================"
 
 if {$run_synth} {

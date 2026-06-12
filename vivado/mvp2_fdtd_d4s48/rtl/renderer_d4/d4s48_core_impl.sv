@@ -23,6 +23,16 @@ module d4s48_core_impl (
     input  wire signed [15:0] hm_wdata,
     output wire        vblank,
 
+    // Runtime camera basis (PS-loaded via GPIO). The PS computes the orthonormal
+    // basis in software (sin/cos of yaw/pitch) and writes these 12 signed Q3.13
+    // vectors; cam_load is pulsed to latch them. Until then they default to
+    // Cyril's fixed isometric view (see localparams below), so boot is sane.
+    input  wire signed [15:0] cam_ox, cam_oy, cam_oz,
+    input  wire signed [15:0] cam_fwd_x, cam_fwd_y, cam_fwd_z,
+    input  wire signed [15:0] cam_right_x, cam_right_y, cam_right_z,
+    input  wire signed [15:0] cam_up_x, cam_up_y, cam_up_z,
+    input  wire               cam_load,
+
     // HDMI video out (clk_pix, to rgb2dvi)
     output wire [23:0] vid_pData,
     output wire        vid_pVDE,
@@ -59,6 +69,34 @@ module d4s48_core_impl (
         else            core_rst_sync <= {core_rst_sync[1:0], 1'b1};
     end
     assign rst_core_n = core_rst_sync[2];
+
+    // ---- runtime camera basis: defaults to the fixed isometric view above,
+    //      reloaded from the PS-supplied vectors on a cam_load rising edge.
+    //      cam_load crosses from the 50 MHz GPIO domain, so it is 2-FF
+    //      synchronized here; the 12 data words are stable for many us before
+    //      the PS toggles cam_load, so they are sampled coherently on its edge.
+    logic signed [POS_W-1:0] r_ox, r_oy, r_oz;
+    logic signed [DIR_W-1:0] r_fx, r_fy, r_fz, r_rx, r_ry, r_rz, r_ux, r_uy, r_uz;
+    (* ASYNC_REG = "TRUE" *) logic [2:0] cam_load_sync;
+    logic cam_load_q;
+    always_ff @(posedge clk_core) begin
+        if (!rst_core_n) begin
+            cam_load_sync <= '0; cam_load_q <= 1'b0;
+            r_ox <= OX;      r_oy <= OY;      r_oz <= OZ;
+            r_fx <= FWD_X;   r_fy <= FWD_Y;   r_fz <= FWD_Z;
+            r_rx <= RIGHT_X; r_ry <= RIGHT_Y; r_rz <= RIGHT_Z;
+            r_ux <= UP_X;    r_uy <= UP_Y;    r_uz <= UP_Z;
+        end else begin
+            cam_load_sync <= {cam_load_sync[1:0], cam_load};
+            cam_load_q    <= cam_load_sync[2];
+            if (cam_load_sync[2] & ~cam_load_q) begin
+                r_ox <= cam_ox;      r_oy <= cam_oy;      r_oz <= cam_oz;
+                r_fx <= cam_fwd_x;   r_fy <= cam_fwd_y;   r_fz <= cam_fwd_z;
+                r_rx <= cam_right_x; r_ry <= cam_right_y; r_rz <= cam_right_z;
+                r_ux <= cam_up_x;    r_uy <= cam_up_y;    r_uz <= cam_up_z;
+            end
+        end
+    end
 
     // ---- core-domain VGA generator: advance once every 4 core cycles ----
     logic [1:0]      core_pix_phase;
@@ -116,10 +154,10 @@ module d4s48_core_impl (
         .H_W(H_W), .H_I(2), .DIR_W(DIR_W), .DIR_I(2), .POS_W(POS_W), .POS_I(2)
     ) u_ray_unit (
         .clk(clk_core), .rst_n(rst_core_n), .en(1'b1),
-        .Ox(OX), .Oy(OY), .Oz(OZ),
-        .fwd_x(FWD_X), .fwd_y(FWD_Y), .fwd_z(FWD_Z),
-        .right_x(RIGHT_X), .right_y(RIGHT_Y), .right_z(RIGHT_Z),
-        .up_x(UP_X), .up_y(UP_Y), .up_z(UP_Z),
+        .Ox(r_ox), .Oy(r_oy), .Oz(r_oz),
+        .fwd_x(r_fx), .fwd_y(r_fy), .fwd_z(r_fz),
+        .right_x(r_rx), .right_y(r_ry), .right_z(r_rz),
+        .up_x(r_ux), .up_y(r_uy), .up_z(r_uz),
         .sun_dx(ZERO), .sun_dy(SUN_D), .sun_dz(SUN_D),
         .px_in(gen_x), .py_in(gen_y), .valid_in(gen_valid),
         .marcher_bram_addr(mb_addr), .marcher_bram_re(mb_re), .marcher_bram_dout(mb_dout),

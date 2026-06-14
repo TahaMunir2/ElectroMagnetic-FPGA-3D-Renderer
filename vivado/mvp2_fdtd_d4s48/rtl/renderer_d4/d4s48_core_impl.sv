@@ -46,7 +46,7 @@ module d4s48_core_impl (
     localparam int V_TOTAL = H + V_FRONT + V_SYNC + V_BACK;
     localparam int PX_W = 10, PY_W = 9;
     localparam int GRID_N = 64, IDX_W = 6, ADDR_W = IDX_W*2;
-    localparam int N_STEPS = 48, H_W = 16, DIR_W = 16, POS_W = 16;
+    localparam int N_STEPS = 58, H_W = 16, DIR_W = 16, POS_W = 16;  // 58 steps (1-cell march, finest detail)
 
     localparam int RENDER_LATENCY_CORE = 4 + 11*N_STEPS + 5 + 5;
     localparam int RENDER_LATENCY_PIX  = (RENDER_LATENCY_CORE + 3) / 4;

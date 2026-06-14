@@ -10,8 +10,8 @@
 //
 //  PANEL COORDINATE:
 //    raw -> calibrated full-scale  X 0..1023 (16.4 cm) / Y 0..612 (9.8 cm)
-//        -> fitted to a 64 x 38 GRID, nearest cell:  X 0..63 , Y 0..37.
-//    The PS receives the GRID CELL (X 0..63, Y 0..37) in the Panel X/Y bytes.
+//        -> fitted to a 128 x 128 GRID, nearest cell:  X 0..127 , Y 0..127.
+//    The PS receives the GRID CELL (X 0..127, Y 0..127) in the Panel X/Y bytes.
 //  TWO-CORNER calibration (press one corner, then the opposite) sets the raw
 //  min/max; saved to flash (NVS) and reloaded on boot. Recalibrate: HOLD Clear
 //  at power-up, or send 'c' on the Serial Monitor.
@@ -24,7 +24,7 @@
 //  PACKET (21 bytes, fixed, big-endian 16-bit fields) — also the UDP payload:
 //    [0]    0xAA  header
 //    [1]    flags: b0 mode2, b1 3D, b2-3 field(0=E 1=B 2=S), b4 wall, b5 clear, b6 touch-valid
-//    [2-3]  Panel X grid cell (0..63)   [4-5]  Panel Y grid cell (0..37)
+//    [2-3]  Panel X grid cell (0..127)  [4-5]  Panel Y grid cell (0..127)
 //    [6-7]  amplitude (0..1023)         [8-9]  conductivity (0..1023)
 //    [10-11] probe (Mode 1, 0..1023)
 //    [12-13] yaw  [14-15] pitch  [16-17] zoom  [18-19] Zscale  (each 0..1023)
@@ -37,8 +37,8 @@
 #define ADC_MAX 1023
 #define X_FULL  1023               // calibrated full-scale X (16.4 cm long edge)
 #define Y_FULL  612                // calibrated full-scale Y (9.8 cm short edge)
-#define GRID_X  64                 // grid columns -> X cell 0..GRID_X-1 (0..63)
-#define GRID_Y  38                 // grid rows    -> Y cell 0..GRID_Y-1 (0..37)
+#define GRID_X  128                // grid columns -> X cell 0..GRID_X-1 (0..127)
+#define GRID_Y  128                // grid rows    -> Y cell 0..GRID_Y-1 (0..127)
 
 // ---------- Panel (directly wired, 6-pin split drive/sense) ----------
 #define XP_DRIVE 18    // X+ drive (HIGH on X-layer read)
@@ -82,6 +82,9 @@
 #define TOUCH_FRAC  0.70f
 #define FIRM_FRAC   0.45f          // calibration captures only firm presses
 #define CAL_MIN_SPAN 200          // mV; a stored calibration must span >= this to be valid
+#define ADC_RAIL_MV 3050          // rail-looking coordinate samples above calibration are invalid
+#define ADC_RAIL_MARGIN_MV 80
+#define DISCHARGE_MS 2            // bleed residual charge after pull-up touch detect
 
 const int TOUCH_THRESH = (int)(TOUCH_FRAC * ADC_MAX);
 const int FIRM_THRESH  = (int)(FIRM_FRAC  * ADC_MAX);
@@ -95,6 +98,8 @@ int sampleADC(uint8_t pin) {                 // median-of-3 raw counts (touch de
 }
 int sampleTrim(uint8_t pin) {                // trimmed-mean of linearised mV (coordinates)
   int v[OVERSAMPLE];
+  analogReadMilliVolts(pin);                 // discard first sample after ADC mux/drive switch
+  delayMicroseconds(300);
   for (int i = 0; i < OVERSAMPLE; i++) v[i] = analogReadMilliVolts(pin);
   for (int i = 1; i < OVERSAMPLE; i++) { int k = v[i], j = i - 1; while (j >= 0 && v[j] > k) { v[j+1]=v[j]; j--; } v[j+1]=k; }
   long s = 0; for (int i = TRIM; i < OVERSAMPLE - TRIM; i++) s += v[i];
@@ -104,6 +109,16 @@ void idlePanel() {
   pinMode(XP_DRIVE, INPUT); pinMode(XP_SENSE, INPUT); pinMode(XM, INPUT);
   pinMode(YP_DRIVE, INPUT); pinMode(YP_SENSE, INPUT); pinMode(YM, INPUT);
 }
+void dischargePanel() {
+  pinMode(XP_DRIVE, OUTPUT); digitalWrite(XP_DRIVE, LOW);
+  pinMode(XM, OUTPUT);       digitalWrite(XM, LOW);
+  pinMode(YP_DRIVE, OUTPUT); digitalWrite(YP_DRIVE, LOW);
+  pinMode(YM, OUTPUT);       digitalWrite(YM, LOW);
+  pinMode(XP_SENSE, OUTPUT); digitalWrite(XP_SENSE, LOW);  // GPIO32 is output-capable
+  pinMode(YP_SENSE, INPUT);                                // GPIO35 is input-only
+  delay(DISCHARGE_MS);
+  idlePanel();
+}
 int panelSense() {                           // touch detect: Y- low, read X+ via pull-up
   pinMode(XP_DRIVE, INPUT); pinMode(XM, INPUT);
   pinMode(YP_DRIVE, INPUT); pinMode(YP_SENSE, INPUT);
@@ -112,16 +127,19 @@ int panelSense() {                           // touch detect: Y- low, read X+ vi
   delay(SETTLE_MS);
   int v = sampleADC(XP_SENSE);
   pinMode(XP_SENSE, INPUT);
+  dischargePanel();
   return v;
 }
-int readXmv() {                              // drive X-layer, sense Y+  (9.8 cm short axis)
+int readXmv() {                              // drive X-layer, sense Y+  -> X coordinate
+  dischargePanel();
   pinMode(XP_DRIVE, OUTPUT); digitalWrite(XP_DRIVE, HIGH);
   pinMode(XM, OUTPUT);       digitalWrite(XM, LOW);
   pinMode(XP_SENSE, INPUT); pinMode(YP_DRIVE, INPUT); pinMode(YM, INPUT); pinMode(YP_SENSE, INPUT);
   delay(SETTLE_MS);
   return sampleTrim(YP_SENSE);
 }
-int readYmv() {                              // drive Y-layer, sense X+  (16.4 cm long axis)
+int readYmv() {                              // drive Y-layer, sense X+  -> Y coordinate
+  dischargePanel();
   pinMode(YP_DRIVE, OUTPUT); digitalWrite(YP_DRIVE, HIGH);
   pinMode(YM, OUTPUT);       digitalWrite(YM, LOW);
   pinMode(YP_SENSE, INPUT); pinMode(XP_DRIVE, INPUT); pinMode(XM, INPUT); pinMode(XP_SENSE, INPUT);
@@ -137,6 +155,9 @@ int toScale(int raw, int rmin, int rmax, int full) {
 // full-scale [0..full] -> nearest cell of an N-line grid [0 .. N-1]
 int toGrid(int fullVal, int full, int n) {
   return constrain((int)lroundf((float)fullVal * (n - 1) / full), 0, n - 1);
+}
+bool validCoordSample(int v, int calMax) {
+  return v >= 0 && (v < ADC_RAIL_MV || calMax < 0 || v <= calMax + ADC_RAIL_MARGIN_MV);
 }
 int readFieldType() {                        // thirds -> 0=E 1=B 2=S
   int v = sampleADC(PIN_FIELD_POT);
@@ -167,8 +188,13 @@ void waitRelease() {                          // block until the panel is releas
 void captureCorner(int &ox, int &oy) {        // wait for a firm press, then average it
   while (panelSense() >= FIRM_THRESH) { idlePanel(); delay(20); }
   delay(120);                                 // settle
-  long sx = 0, sy = 0; const int N = 8;
-  for (int i = 0; i < N; i++) { sx += readYmv(); sy += readXmv(); idlePanel(); delay(8); }
+  long sx = 0, sy = 0; const int N = 12;
+  for (int i = 0; i < N; i++) {
+    int x = readXmv();
+    int y = readYmv();
+    sx += x; sy += y;
+    idlePanel(); delay(8);
+  }
   ox = (int)(sx / N); oy = (int)(sy / N);
 }
 void calibrate() {
@@ -200,7 +226,7 @@ void setup() {
   idlePanel();
   loadCal();
   delay(200);
-  Serial.println("ESP32 one-panel firmware ready (Panel -> 64x38 grid cell, X 0..63 Y 0..37; UART2 -> PS).");
+  Serial.println("ESP32 one-panel firmware ready (Panel -> 128x128 grid cell, X 0..127 Y 0..127; UART2 -> PS).");
   if (!calValid() || digitalRead(PIN_BTN_CLEAR) == LOW) {       // no cal stored, or Clear held
     Serial.println("(no saved calibration, or Clear held at boot)");
     calibrate();
@@ -219,14 +245,18 @@ void loop() {
 
   int  sense   = panelSense();
   bool touched = sense < TOUCH_THRESH;
-  int  gx = 0, gy = 0, rx = -1, ry = -1, xf = -1, yf = -1;
+  int  gx = -1, gy = -1, rx = -1, ry = -1, xf = -1, yf = -1;
   if (touched) {
-    rx = readYmv();   // long edge  (16.4 cm) -> X
-    ry = readXmv();   // short edge ( 9.8 cm) -> Y
-    xf = toScale(rx, xMin, xMax, X_FULL);      // calibrated full-scale 0..1023
-    yf = toScale(ry, yMin, yMax, Y_FULL);      // calibrated full-scale 0..612
-    gx = toGrid(xf, X_FULL, GRID_X);           // fit to 64-col grid -> 0..63
-    gy = toGrid(yf, Y_FULL, GRID_Y);           // fit to 38-row grid -> 0..37
+    rx = readXmv();   // long edge  (16.4 cm) -> X
+    ry = readYmv();   // short edge ( 9.8 cm) -> Y
+    if (validCoordSample(rx, xMax) && validCoordSample(ry, yMax)) {
+      xf = toScale(rx, xMin, xMax, X_FULL);      // calibrated full-scale 0..1023
+      yf = toScale(ry, yMin, yMax, Y_FULL);      // calibrated full-scale 0..612
+      gx = toGrid(xf, X_FULL, GRID_X);           // fit to 128-col grid -> 0..127
+      gy = toGrid(yf, Y_FULL, GRID_Y);           // fit to 128-row grid -> 0..127
+    } else {
+      touched = false;
+    }
   }
   idlePanel();
 
@@ -249,8 +279,8 @@ void loop() {
          | (wall    ? 0x10 : 0)
          | (clear   ? 0x20 : 0)
          | (touched ? 0x40 : 0);
-  putU16(buf,  2, gx);       // Panel X grid cell (0..63)
-  putU16(buf,  4, gy);       // Panel Y grid cell (0..37)
+  putU16(buf,  2, touched ? gx : 0);       // Panel X grid cell (0..127); valid only when b6=1
+  putU16(buf,  4, touched ? gy : 0);       // Panel Y grid cell (0..127); valid only when b6=1
   putU16(buf,  6, amp);
   putU16(buf,  8, cond);
   putU16(buf, 10, probe);

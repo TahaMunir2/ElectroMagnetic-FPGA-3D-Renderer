@@ -180,13 +180,48 @@ blocks supply with the amplitude and phase-step set by the processor.}
 \end{figure}
 
 % ---------------------------------------------------------------------
-\subsection{Keeping the Solver and the Display Out of Each Other's Way}
+\subsection{The Moving Source and the Doppler Effect}
 
-This is the part of the integration we are most pleased with, because it solves
-a genuine timing conflict cleanly. The solver finishes a new frame whenever it
-happens to --- a rate that depends on the grid size and how much we have slowed
-it for viewing --- while the renderer has no such freedom: it must read a frame
-every twenty-fifth of a second to feed the display. If we simply pointed the
+The system can also show a Doppler effect. If the source is made to travel
+through the grid, the wavefronts compress ahead of it and stretch out behind, in
+the same way a passing siren sounds higher in front and lower behind; past the
+(numerical) wave speed the fronts can no longer move out of the way in time and
+form a Mach cone. Producing this cleanly is as much an architectural decision as
+a physical one, and it is a useful example of how work is divided between the
+processor and the fabric.
+
+The effect depends entirely on the source moving \emph{smoothly}: it advances
+only a small fraction of a cell on each FDTD iteration --- we keep the position
+to a resolution of $1/256$ of a cell --- and it has to do so in lockstep with
+the solver, one small step for every iteration completed. This is precisely what
+rules out driving the motion from the processor. The PS reaches the fabric only
+over the AXI register bus through a Python loop, on a millisecond timescale,
+whereas the solver finishes an iteration in microseconds; if the PS tried to
+move the source itself it could manage only a few coarse jumps per second, too
+slow and too granular, and the even wavefront spacing that produces the Doppler
+effect would no longer be smooth.
+
+The moving source therefore lives in the programmable logic. A small position
+generator inside the FDTD adapter keeps the source coordinate in a fixed-point
+accumulator, adds the velocity to it once per completed iteration, and reflects
+it off the PML walls so the source bounces around inside the grid rather than
+walking off the edge. The processor is left with the part it is actually suited
+to: through the slice registers of Fig.~\ref{fig:slices} it sets the velocity,
+arms the motion, and --- because the real hardware runs far faster than is
+comfortable to watch --- throttles the iteration rate so the sweep is slow
+enough to see. The PS decides \emph{what} the source should do; the PL is what
+actually does it, iteration by iteration. That division of labour --- fast,
+regular work in the fabric and slow, high-level choreography from the processor
+--- is the same pattern that recurs throughout the design.
+
+% ---------------------------------------------------------------------
+\subsection{Decoupling the Solver and the Display}
+
+This stage resolves a timing mismatch between the solver and the display. The
+solver finishes a new frame whenever it happens to --- a rate that depends on the
+grid size and how much we have slowed it for viewing --- while the renderer has
+no such freedom: it must read a frame every twenty-fifth of a second to feed the
+display. If we simply pointed the
 renderer at the memory the solver was filling, it would now and then catch a
 frame half-written, with the top of the screen showing the new frame and the
 bottom the old one. This is the textbook producer--consumer problem, and we use
@@ -295,37 +330,37 @@ Address & Function \\
 \end{table}
 
 % ---------------------------------------------------------------------
-\subsection{Going Faster: Multi-Lane Parallelism}
+\subsection{Multi-Lane Parallelism}
 
 To speed the solver up we split the grid into four horizontal \emph{lanes} and
 update them in lockstep, each with its own copy of the field memories. One
 iteration then takes 2048 cycles instead of 8192 --- four times faster, for an
-identical result. The price is paid in memory rather than logic: each lane needs
-its own memories and read ports, and neighbouring lanes have to swap a single
-boundary row, because the update at the edge of one lane reaches into the next.
-Interestingly the four-lane version actually used \emph{fewer} block RAMs than
-the single-lane one (108 against 114), simply because four smaller memories pack
-into the device's RAM blocks more tightly than one large one. We did try eight
-and sixteen lanes but abandoned them: beyond four the extra speed stops being
-worth the growing boundary-exchange logic and routing congestion, especially as
-the solver was by then already running far faster than the display could show.
+identical result. The cost falls on memory rather than logic: each lane needs its
+own memories and read ports, and neighbouring lanes exchange a single boundary
+row, because the update at the edge of one lane reaches into the next. Notably the
+four-lane version used \emph{fewer} block RAMs than the single-lane one (108
+against 114), because four smaller memories pack into the device's RAM blocks more
+tightly than one large one. We also evaluated eight and sixteen lanes but settled
+on four: beyond that point the additional speed no longer justifies the growing
+boundary-exchange logic and routing congestion, particularly as the solver was
+already running well ahead of the display's frame rate.
 
 % ---------------------------------------------------------------------
 \subsection{The Two Demonstrations}
 
 The same solver drives two different renderers, and the choice between them is
-really a trade between block-RAM use and clock speed (Table~\ref{tab:demos}).
+primarily a trade between block-RAM use and clock speed (Table~\ref{tab:demos}).
 The first is a flat top-down contour heatmap (Fig.~\ref{fig:2d}). It needs only a
-single heightmap memory, and freeing up the rest of the block RAM is exactly
-what let us quadruple the grid to $128\times128$ for finer detail; with the
+single heightmap memory, and freeing the rest of the block RAM is what allowed us
+to quadruple the grid to $128\times128$ for finer detail; with the
 source set moving it clearly shows the wavefronts bunching ahead and stretching
 behind, the Doppler effect. The second renders the field as a shaded
-three-dimensional landscape by ray-marching (Fig.~\ref{fig:3d}). This is the more
-striking view but a far hungrier one --- it needs around fifty copies of the
+three-dimensional landscape by ray-marching (Fig.~\ref{fig:3d}). This view is more
+detailed but more resource-intensive --- it needs around fifty copies of the
 heightmap --- so it runs at 100\,MHz and folds its memory reads across several
-cycles to fit, and its camera can be orbited live from the notebook. Keeping
-both is deliberate: the 2D view is the clearer one for reading the physics, and
-the 3D view is the one that makes the demonstration memorable.
+cycles to fit, and its camera can be orbited live from the notebook. Keeping both
+is deliberate: the 2D view is the clearer one for reading the physics, and the 3D
+view gives a more intuitive sense of the field's shape.
 
 \begin{figure}[h]
 \centering

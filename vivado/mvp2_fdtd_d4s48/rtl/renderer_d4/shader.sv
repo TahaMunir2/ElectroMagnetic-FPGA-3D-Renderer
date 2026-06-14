@@ -81,12 +81,14 @@ module shader #(
     logic signed [2*DIR_W-1:0]  bright_q_s1;
     logic signed [31:0]         altitude_shifted_s1;
     logic signed [31:0]         fog_int_s1;
-    logic [11:0]                fog_scaled_comb;
+    logic [15:0]                fog_scaled_comb;
 
-    // D4S48 exact reciprocal: 255 / 48 = 85 / 16.
-    // The 12-bit product covers the maximum value 48 * 85 = 4080.
+    // Fog reciprocal 85/16 (= 255/48): fog ramps to full (255) by ~48 steps and
+    // is clamped to 255 beyond that in stage 2. Widened to 16 bits so the product
+    // step_count*85 does not overflow when N_STEPS > 48 (e.g. 58*85 = 4930, which
+    // wrapped in the old 12-bit field and left far pixels un-fogged / mis-coloured).
     always_comb begin
-        fog_scaled_comb = step_count_in * 12'd85;
+        fog_scaled_comb = step_count_in * 16'd85;
     end
 
     always_ff @(posedge clk) begin
@@ -111,7 +113,7 @@ module shader #(
                 altitude_shifted_s1 <= (h_hit_in <<< (7 - H_F)) + 32'sd128;
 
             // Exact replacement for step_count * 255 / 48 without a divider.
-            fog_int_s1 <= $signed({1'b0, fog_scaled_comb[11:4]});
+            fog_int_s1 <= $signed({1'b0, fog_scaled_comb[15:4]});
         end
     end
 

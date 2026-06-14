@@ -72,7 +72,8 @@ module march_step4 #(
     parameter int FRAC_W     = 8,
 
     parameter logic signed [POS_W-1:0] WORLD_HALF = (1 <<< POS_F),
-    parameter logic signed [POS_W-1:0] DT = (2 * WORLD_HALF) / GRID_N
+    // default matches marcher4 (2-cell step, power of two); marcher4 passes .DT
+    parameter logic signed [POS_W-1:0] DT = (4 * WORLD_HALF) / GRID_N
 )(
     input  logic                       clk,
     input  logic                       rst_n,

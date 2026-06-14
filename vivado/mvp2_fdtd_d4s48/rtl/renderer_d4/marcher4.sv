@@ -54,7 +54,11 @@ module marcher4 #(
     parameter bit  INTERP_IN_MARCHER = 1'b1,
 
     parameter logic signed [POS_W-1:0] WORLD_HALF = (1 <<< POS_F),
-    parameter logic signed [POS_W-1:0] DT         = (2 * WORLD_HALF) / GRID_N
+    // step distance = 2 grid cells (2x the original 1-cell step) to extend ray
+    // reach to ~3.0 world units so the marcher covers the whole map. MUST stay a
+    // power of two so DT*D synthesises as a shift (a non-pow2 factor turns the 3
+    // per-step position multiplies into DSPs -> ~3*N_STEPS extra DSP48s).
+    parameter logic signed [POS_W-1:0] DT         = (4 * WORLD_HALF) / GRID_N
 )(
     input  logic                       clk,
     input  logic                       rst_n,

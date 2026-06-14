@@ -30,6 +30,8 @@ design2/vivado_project_*/
 design3/vivado_project_*/
 design4/vivado_project_*/
 D4S48/vivado_project_*/
+D4L3F16/vivado_project_*/
+D4L3F16/sim_*/
 
 # Keep the hand-maintained Vivado project entry point and known IP configuration
 # files. Generated block designs, runs, caches, and duplicate IP experiments stay

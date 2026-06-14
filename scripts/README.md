@@ -12,6 +12,7 @@ vivado -mode batch -source scripts/create_design2_vivado_project.tcl
 vivado -mode batch -source scripts/create_design3_vivado_project.tcl
 vivado -mode batch -source scripts/create_design4_vivado_project.tcl
 vivado -mode batch -source scripts/create_d4s48_vivado_project.tcl
+vivado -mode batch -source scripts/create_d4l3f16_axis_project.tcl
 vivado -mode batch -source scripts/create_d1s48_vivado_project.tcl
 vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl
 vivado -mode batch -source scripts/create_d1s32_vivado_project.tcl
@@ -20,9 +21,9 @@ vivado -mode batch -source scripts/create_d1s32_camera_bd_project.tcl
 
 Use `-tclargs -force` to recreate an existing generated project.
 
-The Design2, Design3, Design4, D4S48, D1S48, and D1S32 generators also accept
-`-project_dir <path>` if the default generated project directory is locked or
-if you want a separate output copy.
+The Design2, Design3, Design4, D4S48, D4L3F16, D1S48, and D1S32 generators
+also accept `-project_dir <path>` if the default generated project directory is
+locked or if you want a separate output copy.
 
 For `rgb2dvi`, install or point Vivado to the Digilent Vivado IP library. The
 HDMI project scripts accept:
@@ -59,6 +60,17 @@ xsim tb_ray_unit2_smoke -runall
 The equivalent Design3, Design4, and D4S48 smoke tests are
 `design3/tb_ray_unit3_smoke.sv`, `design4/tb_ray_unit4_smoke.sv`, and
 `D4S48/tb_ray_unit4_s48_smoke.sv`.
+
+## D4L3F16 Axis Smoke Test
+
+The D4L3F16 stream test checks that three 16-cycle folded lanes re-serialize
+into exact raster order with correct `tuser`/`tlast` markers:
+
+```powershell
+xvlog -sv D4S48/ray_gen.sv D4S48/march_step4.sv D4L3F16/marcher16.sv D4S48/normal4.sv D4S48/shader.sv D4L3F16/ray_unit4_f16.sv wrapper/heightmap_bram.sv D4L3F16/ray_unit4_lanes3_f16_axis.sv D4L3F16/tb_lanes3_f16_axis_smoke.sv
+xelab --relax tb_lanes3_f16_axis_smoke -snapshot tb_lanes3_f16_axis_smoke
+xsim tb_lanes3_f16_axis_smoke -runall
+```
 
 ## PYNQ Helpers
 

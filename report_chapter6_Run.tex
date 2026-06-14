@@ -329,10 +329,10 @@ A showcase demonstrator needs a real housing, so a custom enclosure was modelled
 \midrule
 Overall cover (W$\times$D$\times$H) & $179 \times 178 \times 67$\,mm \\
 Walls / top plate & 3\,mm / 5\,mm \\
-Touch-panel window & stepped recess + lip, back-left; conducting sheet lies on top in Mode 1 \\
+Touch-panel window & hand-shaped recess, on the back edge of lid for setting input wire \\
 FPGA bay & $127 \times 92$\,mm open cut-out, back-left; only HDMI, USB and power supply remain exposed, while the board buttons are covered \\
 Control strip & open breadboard strip exposing all controls directly: 7 knobs and 4 switches \\
-Cable slot & $\sim$40 $\times$ 22\,mm, back wall \\
+Cable slot & $\sim$30 $\times$ 20\,mm, on back wall, for input, ground, probe wires of Mode 1 \\
 Companion parts & panel frame (bezel) + paper frame (holds the conducting sheet flat) \\
 \bottomrule
 \end{tabularx}
@@ -344,7 +344,7 @@ The neatest detail is the panel mount: the panel drops into a shallow stepped re
 
 \begin{figure}[ht]
 \centering
-\figplaceholder{the dimensioned top-view layout of the cover, marking the panel window, the FPGA bay, the eleven-hole control strip and the rear cable slot}
+\figplaceholder{the dimensioned top-view layout of the cover, marking the panel window, the FPGA bay, the open breadboard control strip and the rear cable slot}
 \caption{Top-view layout of the cover. \emph{(Insert dimensioned drawing.)}}
 \label{fig:box-top}
 \end{figure}
@@ -356,7 +356,7 @@ The neatest detail is the panel mount: the panel drops into a shallow stepped re
 \label{fig:box-frames}
 \end{figure}
 
-The model is \textbf{parametric} --- every dimension is a named value, so a single edit regenerates a consistent model if a part size changes --- and was kept in more than one CAD tool sharing the same values. It is printed \textbf{upside-down} so every opening forms with no overhangs and needs no supports (PLA or PETG). At 318\,mm it exceeds a typical print bed, so it is split into two halves joined at a seam; the finished enclosure is therefore two box parts plus the two frames. Boards mount to the baseboard, the framed panel and the knobs and switches fit the top face, the halves join, and the cover drops over with cables exiting the rear slot. Being a simple cover it has no internal standoffs and a single panel window --- exactly what the final one-panel design needs.
+Breadboards mount to the baseboard, the framed panel fits the top face, the FPGA board sits in its bay with only the required connectors exposed, and the breadboard control strip remains directly accessible through its opening. Being a simple cover it has no internal standoffs and a single panel window --- exactly what the final one-panel design needs.
 
 \begin{figure}[ht]
 \centering

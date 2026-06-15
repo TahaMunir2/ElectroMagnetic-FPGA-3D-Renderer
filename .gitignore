@@ -10,6 +10,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Vivado generated output
+/.srcs/
 vivado_project/*.jou
 vivado_project/*.log
 vivado_project/*.str

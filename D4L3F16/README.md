@@ -102,6 +102,21 @@ Create a synthesis project:
 vivado -mode batch -source scripts/create_d4l3f16_axis_project.tcl -tclargs -force
 ```
 
+Create the VDMA-to-HDMI block-design project used to inspect the framebuffer
+connection topology:
+
+```powershell
+vivado -mode batch -source scripts/create_d4l3f16_vdma_hdmi_bd.tcl -tclargs -force
+```
+
+This creates `D4L3F16/vivado_project_d4l3f16_vdma_hdmi` with block design
+`d4l3f16_vdma_hdmi`. The main path is:
+
+```text
+d4l3f16_axis_0/M_AXIS -> axi_vdma_0/S_AXIS_S2MM -> PS DDR via S_AXI_HP0
+PS DDR -> axi_vdma_0/M_AXIS_MM2S -> v_axi4s_vid_out_0 -> rgb2dvi_0 -> HDMI
+```
+
 Current synthesis result for `ray_unit4_lanes3_f16_axis` at 100 MHz:
 
 ```text

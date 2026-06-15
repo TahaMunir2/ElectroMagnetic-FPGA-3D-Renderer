@@ -13,6 +13,7 @@ vivado -mode batch -source scripts/create_design3_vivado_project.tcl
 vivado -mode batch -source scripts/create_design4_vivado_project.tcl
 vivado -mode batch -source scripts/create_d4s48_vivado_project.tcl
 vivado -mode batch -source scripts/create_d4l3f16_axis_project.tcl
+vivado -mode batch -source scripts/create_d4l3f16_vdma_hdmi_bd.tcl
 vivado -mode batch -source scripts/create_d1s48_vivado_project.tcl
 vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl
 vivado -mode batch -source scripts/create_d1s32_vivado_project.tcl
@@ -33,6 +34,7 @@ vivado -mode batch -source scripts/create_design2_vivado_project.tcl -tclargs -i
 vivado -mode batch -source scripts/create_design3_vivado_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 vivado -mode batch -source scripts/create_design4_vivado_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 vivado -mode batch -source scripts/create_d4s48_vivado_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
+vivado -mode batch -source scripts/create_d4l3f16_vdma_hdmi_bd.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 vivado -mode batch -source scripts/create_d1s48_camera_bd_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 vivado -mode batch -source scripts/create_d1s32_camera_bd_project.tcl -tclargs -ip_repo D:/path/to/vivado-library/ip
 ```

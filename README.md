@@ -100,7 +100,7 @@ The solver (producer) and renderer (consumer) are decoupled by a **ping-pong dou
 ├── src/hdl/                      # Core solver RTL (fdtd_solver, engine, Ey/Ex/Bz, pml…)
 ├── docs/                         # Design notes, guides, and the report (docs/report/)
 ├── tests/                        # Testbenches and verification
-└── PIPELINE.md / CLAUDE.md       # Stage-by-stage and architecture references
+└── PIPELINE.md                   # Stage-by-stage pipeline reference
 ```
 
 > **For the marker:** the two demonstrated builds are **`mvp2_fdtd_d4s48`** (3D) and **`mvp2_fdtd_contour_128`** (2D). Each is fully reproducible from its `scripts/*.tcl` — the block design is generated from script, not hand-drawn.

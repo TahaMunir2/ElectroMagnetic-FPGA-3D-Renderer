@@ -1,10 +1,10 @@
 <div align="center">
 
-# ⚡ Electromagnetic FPGA 3D Renderer
+# Electromagnetic FPGA 3D Renderer
 
 ### Real-time visualisation of Maxwell's equations, computed and rendered entirely on an FPGA
 
-A live **2D Finite-Difference Time-Domain (FDTD)** electromagnetic solver running on a **PYNQ-Z1 (Zynq-7020)**, streamed straight to **HDMI at 640×480, 25 fps** — viewable either as a flat colour field or as a ray-marched 3D surface, all in hardware. No frame is ever computed on a CPU.
+A live **2D Finite-Difference Time-Domain (FDTD)** electromagnetic solver running on a **PYNQ-Z1 (Zynq-7020)**, streamed directly to **HDMI at 640×480, 25 fps** — viewable either as a flat colour field or as a ray-marched 3D surface, entirely in hardware. No frame is ever computed on a CPU.
 
 *EE2 Mathematics Accelerator Project · Imperial College London*
 
@@ -12,7 +12,7 @@ A live **2D Finite-Difference Time-Domain (FDTD)** electromagnetic solver runnin
 
 ---
 
-## 🎬 See it running
+## Demonstration
 
 <div align="center">
 
@@ -22,7 +22,7 @@ A live **2D Finite-Difference Time-Domain (FDTD)** electromagnetic solver runnin
 <!--  panel dragging the source around. Replace the line below.          -->
 <!-- ───────────────────────────────────────────────────────────────── -->
 
-> **▶️ Live demo video / GIF goes here** — _placeholder: add a capture of the HDMI output and the hardware panel in use._
+> **Live demo video / GIF goes here** — _placeholder: add a capture of the HDMI output and the hardware panel in use._
 
 |  2D field view  |  3D ray-marched view  |
 |:---:|:---:|
@@ -33,7 +33,7 @@ A live **2D Finite-Difference Time-Domain (FDTD)** electromagnetic solver runnin
 
 ---
 
-## 📌 What this project does
+## Overview
 
 The brief asked for a real-time visualisation of a computationally intensive, embarrassingly-parallel function. Rather than a fractal, we chose something physically meaningful: **solving Maxwell's equations in time** and making the invisible electromagnetic field tangible.
 
@@ -51,7 +51,7 @@ A wave source is generated on-chip, propagated across a **128×128 FDTD grid** e
 
 ---
 
-## 🏗️ How it works (pipeline at a glance)
+## Architecture
 
 ```
   CORDIC          2D FDTD            field            ping-pong         ray-march
@@ -66,17 +66,15 @@ A wave source is generated on-chip, propagated across a **128×128 FDTD grid** e
 
 The solver (producer) and renderer (consumer) are decoupled by a **ping-pong double buffer**, so the simulation and the display run independently with no tearing. A full architectural write-up — every block, clock domain and AXI connection — is in the integration report below.
 
-📖 **Detailed pipeline reference:** [`PIPELINE.md`](PIPELINE.md) · **Onboarding / architecture:** [`CLAUDE.md`](CLAUDE.md)
+**Detailed pipeline reference:** [`PIPELINE.md`](PIPELINE.md) · **Onboarding / architecture:** [`CLAUDE.md`](CLAUDE.md)
 
 ---
 
-## 📑 Report & documentation
+## Report & documentation
 
 | Document | Link |
 |---|---|
-| **📕 Full group report** | [`docs/report/report_draft.pdf`](docs/report/report_draft.pdf) |
-| System integration chapter | [`docs/report/system_integration.pdf`](docs/report/system_integration.pdf) |
-| Project specifications & requirements (§1.1) | [`docs/report/project_requirements.pdf`](docs/report/project_requirements.pdf) |
+| **Full group report** | [`docs/report/report_draft.pdf`](docs/report/report_draft.pdf) |
 | Resource utilisation report | [`docs/report/utilisation_d4s48.rpt`](docs/report/utilisation_d4s48.rpt) |
 | Timing report | [`docs/report/timing_d4s48.rpt`](docs/report/timing_d4s48.rpt) |
 
@@ -84,18 +82,18 @@ The solver (producer) and renderer (consumer) are decoupled by a **ping-pong dou
 
 ---
 
-## 🗺️ Repository guide
+## Repository guide
 
 ```
 .
 ├── vivado/                       # FPGA designs (Vivado 2023.2, scripted Tcl builds)
-│   ├── mvp2_fdtd_d4s48/          # ★ Main 3D demo: live 128² FDTD + ray-march renderer
+│   ├── mvp2_fdtd_d4s48/          # Main 3D demo: live 128² FDTD + ray-march renderer
 │   │   ├── rtl/                  #   SystemVerilog/Verilog sources
 │   │   ├── scripts/              #   create_fdtd_render_project.tcl (whole BD from script)
 │   │   ├── esp32/                #   touch-panel firmware (hardware UI)
 │   │   ├── test_fdtd_d4s48.ipynb #   PYNQ control notebook
 │   │   └── *.bit / *.hwh         #   pre-built bitstream + hardware handoff
-│   ├── mvp2_fdtd_contour_128/    # ★ Main 2D demo: 128² colour-field / contour view
+│   ├── mvp2_fdtd_contour_128/    # Main 2D demo: 128² colour-field / contour view
 │   ├── mvp2_fdtd_hdmi_quad/      #   4-lane parallel solver variant
 │   ├── mvp2_fdtd_hdmi_msrc/      #   multi-source (interference) variant
 │   └── mvp2_pingpong/            #   producer/consumer double-buffer prototype
@@ -109,7 +107,7 @@ The solver (producer) and renderer (consumer) are decoupled by a **ping-pong dou
 
 ---
 
-## ▶️ Running it
+## Running it
 
 ```bash
 # 1. Build the bitstream (Vivado 2023.2) — block design is generated from Tcl:
@@ -127,7 +125,7 @@ Connect HDMI to a monitor; the notebook exposes `set_source_position`, `set_velo
 
 ---
 
-## 🧭 Development trace
+## Development trace
 
 82 commits over four weeks (19 May → 15 Jun 2026), evolving from a 1D scaffold to a full real-time 3D pipeline. Key milestones:
 
@@ -143,11 +141,11 @@ Connect HDMI to a monitor; the notebook exposes `set_source_position`, `set_velo
 | 12 Jun | **PS-controllable camera** (orbit/tilt/zoom); fixed scrambled AXI address map |
 | 14 Jun | Probe-drag source positioning; shader fog fix; integration report |
 
-📜 Full history: [commit log on GitHub](https://github.com/TahaMunir2/ElectroMagnetic-FPGA-3D-Renderer/commits) · `git log --oneline`
+Full history: [commit log on GitHub](https://github.com/TahaMunir2/ElectroMagnetic-FPGA-3D-Renderer/commits) · `git log --oneline`
 
 ---
 
-## 👥 Team
+## Team
 
 | Area | Contributors |
 |---|---|

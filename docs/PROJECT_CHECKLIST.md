@@ -4,20 +4,20 @@
 
 ### BRAM Module (Yi)
 
-- [ ] **Design Phase**
-  - [ ] Memory architecture specification
-  - [ ] Address decoding scheme
-  - [ ] Data format documentation
+- [x] **Design Phase**
+  - [x] Memory architecture specification
+  - [x] Address decoding scheme
+  - [x] Data format documentation
 
-- [ ] **Implementation**
-  - [ ] Verilog/VHDL code complete
-  - [ ] Dual-port configuration tested
-  - [ ] Q3.13 data format verified
+- [x] **Implementation**
+  - [x] Verilog/VHDL code complete
+  - [x] Dual-port configuration tested
+  - [x] Q3.13 data format verified
 
 - [ ] **Verification**
-  - [ ] Testbench created
-  - [ ] Read/write operations tested
-  - [ ] Initial conditions verified
+  - [x] Testbench created
+  - [x] Read/write operations tested
+  - [x] Initial conditions verified
   - [ ] Synthesis successful
 
 - [ ] **Integration**
@@ -28,20 +28,20 @@
 ### CORDIC Input Generator (Yi)
 
 - [ ] **Design Phase**
-  - [ ] IP core selection complete
-  - [ ] Phase accumulator design
-  - [ ] Frequency calculation method
+  - [x] IP core selection complete
+  - [x] Phase accumulator design
+  - [x] Frequency calculation method
 
 - [ ] **Implementation**
   - [ ] IP instantiated
-  - [ ] Phase accumulator coded
-  - [ ] Output formatting in Q3.13
+  - [x] Phase accumulator coded
+  - [x] Output formatting in Q3.13
 
 - [ ] **Verification**
-  - [ ] Sine wave output validated
-  - [ ] Fixed-point precision verified
-  - [ ] Frequency accuracy checked
-  - [ ] Testbench passed
+  - [x] Sine wave output validated
+  - [x] Fixed-point precision verified
+  - [x] Frequency accuracy checked
+  - [x] Testbench passed
 
 - [ ] **Integration**
   - [ ] Output interface standardized

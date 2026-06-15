@@ -1,0 +1,124 @@
+% =====================================================================
+%  Section 1.1 "Project specifications and requirements" for the master
+%  report (Chapter 1, "The Problem: Visualising the Invisible").
+%  Drop the body (from \section onward) into the master document; the
+%  preamble here is only so it previews standalone.
+%  Requirement statements are quoted from the EE2 "maths accelerator" brief:
+%  https://github.com/edstott/EE2Project/blob/main/maths-accelerator/README.md
+% =====================================================================
+\documentclass[11pt]{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\begin{document}
+
+\section{Project specifications and requirements}
+
+The project brief asks for a \emph{real-time visualisation of a computationally
+intensive, embarrassingly-parallel mathematical function}, computed on the
+supplied PYNQ--Z1 board with a hardware accelerator for the inner loops, compared
+against a CPU implementation, and wrapped in a user interface that makes it
+useful as an educational tool. The brief suggests fractals as a typical choice
+and explicitly discourages N-body simulations, because their global state and
+random memory-access patterns map poorly onto the FPGA.
+
+We chose a more ambitious ``function'': the time-dependent solution of Maxwell's
+equations by the Finite-Difference Time-Domain (FDTD) method, visualised either
+as a 2D colour field or as a ray-marched 3D surface. This makes the otherwise
+invisible electromagnetic field tangible, which is a stronger educational result
+than a synthetic fractal, while still satisfying the brief's computational
+demands. The choice does change the shape of the parallelism, and it is worth
+being precise about how:
+
+\begin{itemize}
+  \item \textbf{The renderer is embarrassingly parallel.} Each of the
+  $640\times480$ output pixels is produced by an independent ray-march with no
+  data dependence on any other pixel --- exactly the property the brief asks
+  for, and the source of most of the throughput demand. This is the part that
+  must keep up with the display.
+  \item \textbf{The FDTD field has only local, structured dependence.} Updating a
+  cell needs only its immediate neighbours, and every memory access is regular
+  and known at compile time. This is the favourable opposite of the discouraged
+  N-body case (global coupling, random access): the locality is precisely what
+  lets us stream and spatially parallelise the solver on the fabric (the
+  four-lane decomposition in the FDTD chapter).
+\end{itemize}
+
+Table~\ref{tab:reqs} lists the brief's requirements and where each is addressed
+in this report; the evidence that they were met (throughput numbers, timing,
+resource use) is collected in the Evaluation chapter.
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{0.46\textwidth}|p{0.46\textwidth}|}
+\hline
+\textbf{Requirement (brief)} & \textbf{How the project addresses it} \\
+\hline
+\multicolumn{2}{|l|}{\textit{Visualisation}}\\
+\hline
+Display a visualisation of a mathematical function computed in real time. &
+The FDTD solution of Maxwell's equations is rendered to HDMI at $640\times480$,
+25\,fps, updating live (Ch.~3--5). \\
+\hline
+The function shall be computationally intensive --- non-trivial at the required
+resolution and frame rate. &
+A $128\times128$ field is time-stepped every frame and ray-marched per pixel; the
+per-pixel renderer alone is the binding throughput constraint (Ch.~4). \\
+\hline
+The computation should be embarrassingly parallel (pixels independent). &
+The renderer ray-marches every pixel independently with no inter-pixel data
+dependence; the FDTD field has only local nearest-neighbour coupling and is
+parallelised by spatial decomposition (Ch.~3, Ch.~4). \\
+\hline
+\multicolumn{2}{|l|}{\textit{Accelerator}}\\
+\hline
+Generated on the PYNQ--Z1, with an accelerator in FPGA soft logic computing the
+inner loops. &
+The FDTD update and the ray-march inner loops both run in the programmable logic;
+the processor only configures and reads back (Ch.~3--5). \\
+\hline
+The accelerator shall be described in Verilog or SystemVerilog. &
+All datapath RTL (solver, magnitude, bridge, renderer) is SystemVerilog/Verilog,
+built from a scripted, version-controlled flow (Ch.~5). \\
+\hline
+The accelerator shall provide a CPU interface for parameter adjustment. &
+An AXI-GPIO register map exposes amplitude, frequency, source position, display
+mode, motion and camera to the processor, driven live from a notebook (Ch.~5). \\
+\hline
+Number formats and word lengths chosen to trade accuracy against throughput. &
+Signed Q3.13 fixed-point throughout, selected from a documented comparison of
+formats (Q1.15--FP32) against rounding error and resource cost (Ch.~3). \\
+\hline
+Throughput shall exceed a CPU-only C/C++/Cython implementation. &
+Benchmarked against an ARM (NEON) software baseline; the accelerated solver is
+substantially faster (Ch.~3, Ch.~7). \\
+\hline
+\multicolumn{2}{|l|}{\textit{User interface}}\\
+\hline
+Provide a user interface that enhances educational value. &
+The user can place and move sources, switch field/energy views, vary speed and
+material, and watch propagation, interference, the Doppler effect and energy flow
+in real time (Ch.~6). \\
+\hline
+The UI may use separate hardware. &
+A standalone ESP32 with a resistive touch panel and an analog conducting-sheet
+rig form the input hardware, linked to the board over serial (Ch.~6). \\
+\hline
+The UI shall allow intuitive or interesting parameter adjustment. &
+The source is placed by dragging a stylus on the panel; potentiometers set
+amplitude, material and camera; the conducting-sheet probe links the simulation
+to a measurable physical analogue (Ch.~6). \\
+\hline
+The UI should present information as an overlay or a separate medium. &
+Parameters and status are shown on the host notebook (separate medium), the
+physical panel is labelled, and a colour-vision-safe palette communicates field
+magnitude (Ch.~6). \\
+\hline
+\end{tabular}
+\caption{Project requirements and where each is addressed. Quantitative evidence
+that they were met is given in the Evaluation chapter.}
+\label{tab:reqs}
+\end{table}
+
+\end{document}

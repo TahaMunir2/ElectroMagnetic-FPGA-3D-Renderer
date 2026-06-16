@@ -40,7 +40,10 @@ module fdtd_solver #(
     input  wire  [DATA_WIDTH-1:0]   ey_adj_dout,
     output logic [CELL_WIDTH-1:0]   current_row,
     output logic [CELL_WIDTH-1:0]   current_col,
-    output logic                    e_phase
+    output logic                    e_phase,
+    input  wire [1:0] preset,
+    input  wire [3:0] slit_w,
+    input  wire signed [DATA_WIDTH-1:0] cb_mat
 );
 
     logic signed [DATA_WIDTH-1:0] engine_ey_old;
@@ -80,6 +83,14 @@ module fdtd_solver #(
     logic signed [DATA_WIDTH-1:0] cb_ey;
     logic signed [DATA_WIDTH-1:0] cb_ex;
     logic signed [DATA_WIDTH-1:0] cb_bz;
+    logic signed [DATA_WIDTH-1:0] cb_ey_m;
+    logic signed [DATA_WIDTH-1:0] cb_ex_m;
+    logic wall;
+    logic wall_col;
+    logic slit_s;
+    logic slit_da;
+    logic slit_db;
+    logic slit_g;
     logic signed [CELL_WIDTH-1:0] d_ey;
     logic signed [CELL_WIDTH-1:0] d_ex;
     logic signed [CELL_WIDTH-1:0] d_bz;
@@ -114,12 +125,15 @@ module fdtd_solver #(
         .cb_bz(cb_bz)
     );
 
+    assign cb_ey_m = (wr_column >= COLUMNS/2) ? cb_mat : cb_ey;
+    assign cb_ex_m = (wr_column >= COLUMNS/2) ? cb_mat : cb_ex;
+
     fdtd_engine #(.FP_WIDTH(DATA_WIDTH)) fdtd_engine (
         .clk(clk),
         .ca_ey(ca_ey),
-        .cb_ey(cb_ey),
+        .cb_ey(cb_ey_m),
         .ca_ex(ca_ex),
-        .cb_ex(cb_ex),
+        .cb_ex(cb_ex_m),
         .ca_bz(ca_bz),
         .cb_bz(cb_bz),
         .ey_old(engine_ey_old),
@@ -161,6 +175,18 @@ always_comb begin
     else                    wr_cell = wr_counter - GRID_SIZE;
     wr_row      = (wr_cell / COLUMNS) + ROW_OFFSET;
     wr_column   = wr_cell - (wr_cell / COLUMNS) * COLUMNS;
+
+    wall_col = (wr_column == COLUMNS/2);
+    slit_s   = (wr_row >= TOTAL_ROWS/2 - slit_w) && (wr_row <= TOTAL_ROWS/2 + slit_w);
+    slit_da = (wr_row >= TOTAL_ROWS/4 - slit_w) && (wr_row <= TOTAL_ROWS/4 + slit_w);
+    slit_db = (wr_row >= 3*TOTAL_ROWS/4 - slit_w) && (wr_row <= 3*TOTAL_ROWS/4 + slit_w);
+    slit_g  = (wr_row[2:0] < slit_w[2:0]);
+    wall = 1'b0;
+    case (preset)
+        2'd1: wall = wall_col && !slit_s;
+        2'd2: wall = wall_col && !(slit_da || slit_db);
+        2'd3: wall = wall_col && !slit_g;
+    endcase
 
     bz_adj_rd_addr    = '0;
     ey_adj_rd_addr    = '0;
@@ -236,6 +262,10 @@ always_ff @(posedge clk) begin
             else ey_wr_data <= engine_ey_new;
             if (wr_column == 0 || wr_column == COLUMNS-1) ex_wr_data <= '0;
             else ex_wr_data <= engine_ex_new;
+            if (wall) begin
+                ey_wr_data <= '0;
+                ex_wr_data <= '0;
+            end
         end else begin
             bz_we      <= write_valid;
             bz_wr_data <= engine_bz_new;

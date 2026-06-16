@@ -15,7 +15,10 @@ module top_fdtd_quad_lane #(
     input  wire source_valid,
     input  wire [2*CELL_WIDTH-1:0] source_addr,
     input  wire solver_enable,
-    output logic solver_done
+    output logic solver_done,
+    input  wire [1:0] preset,
+    input  wire [3:0] slit_w,
+    input  wire signed [DATA_WIDTH-1:0] cb_mat
 );
 
     localparam GRID_SIZE = ROWS * COLUMNS;
@@ -351,7 +354,10 @@ module top_fdtd_quad_lane #(
         .solver_done(slv_done[0]),
         .current_row(slv_current_row[0]),
         .current_col(slv_current_col[0]),
-        .e_phase(slv_e_phase[0])
+        .e_phase(slv_e_phase[0]),
+        .preset(preset),
+        .slit_w(slit_w),
+        .cb_mat(cb_mat)
     );
 
     fdtd_solver #(
@@ -393,7 +399,10 @@ module top_fdtd_quad_lane #(
         .solver_done(slv_done[1]),
         .current_row(slv_current_row[1]),
         .current_col(slv_current_col[1]),
-        .e_phase(slv_e_phase[1])
+        .e_phase(slv_e_phase[1]),
+        .preset(preset),
+        .slit_w(slit_w),
+        .cb_mat(cb_mat)
     );
 
     fdtd_solver #(
@@ -435,7 +444,10 @@ module top_fdtd_quad_lane #(
         .solver_done(slv_done[2]),
         .current_row(slv_current_row[2]),
         .current_col(slv_current_col[2]),
-        .e_phase(slv_e_phase[2])
+        .e_phase(slv_e_phase[2]),
+        .preset(preset),
+        .slit_w(slit_w),
+        .cb_mat(cb_mat)
     );
 
     fdtd_solver #(
@@ -477,7 +489,10 @@ module top_fdtd_quad_lane #(
         .solver_done(slv_done[3]),
         .current_row(slv_current_row[3]),
         .current_col(slv_current_col[3]),
-        .e_phase(slv_e_phase[3])
+        .e_phase(slv_e_phase[3]),
+        .preset(preset),
+        .slit_w(slit_w),
+        .cb_mat(cb_mat)
     );
 
 endmodule

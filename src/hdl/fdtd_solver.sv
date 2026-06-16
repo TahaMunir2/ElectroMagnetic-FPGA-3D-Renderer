@@ -100,7 +100,7 @@ module fdtd_solver #(
         .CELL_WIDTH(CELL_WIDTH),
         .PML_SIZE(PML_SIZE)
     ) pml_ey (
-        .d(d_ey),
+        .d(d_ex),
         .ca(ca_ey),
         .cb_e(cb_ey)
     );
@@ -110,7 +110,7 @@ module fdtd_solver #(
         .CELL_WIDTH(CELL_WIDTH),
         .PML_SIZE(PML_SIZE)
     ) pml_ex (
-        .d(d_ex),
+        .d(d_ey),
         .ca(ca_ex),
         .cb_e(cb_ex)
     );

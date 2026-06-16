@@ -43,6 +43,7 @@ module fdtd_solver #(
     output logic                    e_phase,
     input  wire [1:0] preset,
     input  wire [3:0] slit_w,
+    input  wire mat_en,
     input  wire signed [DATA_WIDTH-1:0] cb_mat
 );
 
@@ -125,8 +126,8 @@ module fdtd_solver #(
         .cb_bz(cb_bz)
     );
 
-    assign cb_ey_m = (wr_column >= COLUMNS/2) ? cb_mat : cb_ey;
-    assign cb_ex_m = (wr_column >= COLUMNS/2) ? cb_mat : cb_ex;
+    assign cb_ey_m = (mat_en && wr_column >= COLUMNS/2) ? cb_mat : cb_ey;
+    assign cb_ex_m = (mat_en && wr_column >= COLUMNS/2) ? cb_mat : cb_ex;
 
     fdtd_engine #(.FP_WIDTH(DATA_WIDTH)) fdtd_engine (
         .clk(clk),

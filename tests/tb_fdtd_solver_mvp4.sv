@@ -33,6 +33,7 @@ module tb_fdtd_solver_mvp4;
     logic [2*CELL_WIDTH-1:0]      source_addr;
     logic [1:0]                   preset;
     logic [3:0]                   slit_w;
+    logic                         mat_en;
     logic signed [DATA_WIDTH-1:0] cb_mat;
 
     always_ff @(posedge clk) begin
@@ -88,6 +89,7 @@ module tb_fdtd_solver_mvp4;
         .e_phase(),
         .preset(preset),
         .slit_w(slit_w),
+        .mat_en(mat_en),
         .cb_mat(cb_mat)
     );
 
@@ -138,6 +140,7 @@ module tb_fdtd_solver_mvp4;
         source_addr   = flat(8, 8);
         preset        = 2'd0;
         slit_w        = 4'd4;
+        mat_en        = 1'b0;
         cb_mat        = -16'sd717;
 
         repeat (5) @(posedge clk);
@@ -218,6 +221,7 @@ module tb_fdtd_solver_mvp4;
         clear_mem();
         bz_mem[flat(32, 40)] = 16'sd8192;
         preset        = 2'd0;
+        mat_en        = 1'b1;
         cb_mat        = 16'sd0;
         source_valid  = 1'b0;
         do_reset();
@@ -225,14 +229,15 @@ module tb_fdtd_solver_mvp4;
         wait_done(2*GRID + 10);
 
         if (ey_mem[flat(32, 40)] !== '0) begin
-            $display("FAIL test 6: cb_mat=0 should suppress ey, got %0d", $signed(ey_mem[flat(32,40)]));
+            $display("FAIL test 6: mat_en + cb_mat=0 should suppress ey, got %0d", $signed(ey_mem[flat(32,40)]));
             $finish;
         end
-        $display("PASS test 6: cb_mat=0 suppresses right-half ey update");
+        $display("PASS test 6: mat_en + cb_mat=0 suppresses right-half ey update");
 
         clear_mem();
         bz_mem[flat(32, 40)] = 16'sd8192;
         preset        = 2'd0;
+        mat_en        = 1'b1;
         cb_mat        = -16'sd717;
         source_valid  = 1'b0;
         do_reset();
@@ -240,12 +245,28 @@ module tb_fdtd_solver_mvp4;
         wait_done(2*GRID + 10);
 
         if (ey_mem[flat(32, 40)] == '0) begin
-            $display("FAIL test 7: cb_mat=-717 should drive ey non-zero");
+            $display("FAIL test 7: mat_en + cb_mat=-717 should drive ey non-zero");
             $finish;
         end
-        $display("PASS test 7: cb_mat=-717 drives ey[32,40]=%0d", $signed(ey_mem[flat(32,40)]));
+        $display("PASS test 7: mat_en + cb_mat=-717 drives ey[32,40]=%0d", $signed(ey_mem[flat(32,40)]));
 
-        $display("all 7 tests passed");
+        clear_mem();
+        bz_mem[flat(32, 40)] = 16'sd8192;
+        preset        = 2'd0;
+        mat_en        = 1'b0;
+        cb_mat        = 16'sd0;
+        source_valid  = 1'b0;
+        do_reset();
+        solver_enable = 1'b1;
+        wait_done(2*GRID + 10);
+
+        if (ey_mem[flat(32, 40)] == '0) begin
+            $display("FAIL test 8: mat_en=0 should ignore cb_mat and update ey, got 0");
+            $finish;
+        end
+        $display("PASS test 8: mat_en=0 ignores cb_mat, ey[32,40]=%0d", $signed(ey_mem[flat(32,40)]));
+
+        $display("all 8 tests passed");
         $finish;
     end
 

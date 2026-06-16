@@ -18,6 +18,7 @@ module top_fdtd_quad_lane #(
     output logic solver_done,
     input  wire [1:0] preset,
     input  wire [3:0] slit_w,
+    input  wire mat_en,
     input  wire signed [DATA_WIDTH-1:0] cb_mat
 );
 
@@ -357,6 +358,7 @@ module top_fdtd_quad_lane #(
         .e_phase(slv_e_phase[0]),
         .preset(preset),
         .slit_w(slit_w),
+        .mat_en(mat_en),
         .cb_mat(cb_mat)
     );
 
@@ -402,6 +404,7 @@ module top_fdtd_quad_lane #(
         .e_phase(slv_e_phase[1]),
         .preset(preset),
         .slit_w(slit_w),
+        .mat_en(mat_en),
         .cb_mat(cb_mat)
     );
 
@@ -447,6 +450,7 @@ module top_fdtd_quad_lane #(
         .e_phase(slv_e_phase[2]),
         .preset(preset),
         .slit_w(slit_w),
+        .mat_en(mat_en),
         .cb_mat(cb_mat)
     );
 
@@ -492,6 +496,7 @@ module top_fdtd_quad_lane #(
         .e_phase(slv_e_phase[3]),
         .preset(preset),
         .slit_w(slit_w),
+        .mat_en(mat_en),
         .cb_mat(cb_mat)
     );
 

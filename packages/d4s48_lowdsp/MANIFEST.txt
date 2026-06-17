@@ -1,0 +1,31 @@
+D4S48 low-DSP package
+=====================
+
+Source origin:
+- D4S48/ray_unit_hdmi_top_d4s48.sv
+- D4S48/ray_unit4.sv
+- D4S48/ray_gen.sv
+- D4S48/march_step4.sv
+- D4S48/marcher4.sv
+- D4S48/normal4.sv
+- D4S48/shader.sv
+- wrapper/video_timing_640x480.sv
+- wrapper/heightmap_bram.sv
+- D4S48/pynq_z1_hdmi_d4s48.xdc
+- D4S48/tb_ray_unit4_s48_smoke.sv
+- D4S48/tb_d4s48_hdmi_wrapper.sv
+
+Verification snapshot from renderer_opt branch:
+- smoke simulation: 4800 outputs, 3651 non-sky pixels, 0 coordinate errors
+- routed setup WNS: +0.446 ns
+- routed hold WHS: +0.010 ns
+- bus-skew slack: +9.029 ns and +9.120 ns
+- LUTs: 15394 / 53200
+- registers: 22072 / 106400
+- BRAM tiles: 49 / 140
+- DSPs: 57 / 220
+
+Notes:
+- Generated Vivado project, reports, and bitstreams are not included.
+- rgb2dvi is a Digilent IP and must be available in Vivado's IP catalog.
+- The HDMI wrapper delay constant is based on the optimized 12-cycle march step.

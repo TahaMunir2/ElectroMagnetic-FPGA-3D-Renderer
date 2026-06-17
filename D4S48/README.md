@@ -16,13 +16,13 @@ synchronized separately into the pixel and renderer clock domains.
 The registered renderer latency is:
 
 - `ray_gen`: 4 core cycles
-- `marcher4`: `11 * 48 = 528` core cycles
+- `marcher4`: `12 * 48 = 576` core cycles
 - `normal4`: 5 core cycles
 - `shader`: 5 core cycles
-- total: 542 core cycles
+- total: 590 core cycles
 
-The HDMI wrapper converts that latency to 136 pixel clocks and adds an
-eight-pixel FIFO priming margin, delaying video timing by 144 pixel clocks.
+The HDMI wrapper converts that latency to 148 pixel clocks and adds an
+eight-pixel FIFO priming margin, delaying video timing by 156 pixel clocks.
 
 Generate and build the standalone PYNQ-Z1 Vivado project from the repository
 root:
@@ -36,17 +36,17 @@ The generated Vivado project and bitstream are intentionally ignored by git.
 
 ## Verified Implementation
 
-Vivado 2023.2 implementation for the PYNQ-Z1 (`xc7z020clg400-1`) completed
-through bitstream generation:
+Vivado 2023.2 low-DSP implementation for the PYNQ-Z1 (`xc7z020clg400-1`)
+completed through bitstream generation:
 
-- smoke simulation: 4800 outputs, 3657 non-sky pixels, 0 coordinate errors
-- setup WNS: +0.457 ns
-- hold WHS: +0.016 ns
-- asynchronous FIFO bus-skew slack: +8.824 ns and +9.118 ns
-- LUTs: 13,176 / 53,200 (24.77%)
-- registers: 19,812 / 106,400 (18.62%)
+- smoke simulation: 4800 outputs, 3651 non-sky pixels, 0 coordinate errors
+- setup WNS: +0.446 ns
+- hold WHS: +0.010 ns
+- asynchronous FIFO bus-skew slack: +9.029 ns and +9.120 ns
+- LUTs: 15,394 / 53,200 (28.94%)
+- registers: 22,072 / 106,400 (20.74%)
 - BRAM tiles: 49 / 140 (35.00%)
-- DSPs: 153 / 220 (69.55%)
+- DSPs: 57 / 220 (25.91%)
 
 The generated bitstream is:
 

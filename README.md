@@ -160,6 +160,4 @@ Full history: [commit log on GitHub](https://github.com/TahaMunir2/ElectroMagnet
 
 <div align="center">
 
-Built on a PYNQ-Z1 in SystemVerilog · Vivado 2023.2 · solving Maxwell's equations 25 times a second.
-
 </div>

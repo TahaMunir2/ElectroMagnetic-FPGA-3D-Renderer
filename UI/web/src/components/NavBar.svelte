@@ -1,12 +1,12 @@
 <script>
-  import { status, lastMessage, connect, disconnect } from "../lib/connection.js";
+  import { status, lastMessage, connect, disconnect, setInputSource, getServerUrl } from "../lib/connection.js";
 
-  export let current = "static";
+  export let current = "wave";
   export let setPage = () => {};
 
   const links = [
-    { id: "static",  label: "Static Field" },
     { id: "wave",    label: "Wave Simulation" },
+    { id: "terrain", label: "3D Terrain" },
     { id: "physics", label: "The Physics" },
     { id: "explorer",label: "Field Explorer" },
     { id: "about",   label: "About" },
@@ -21,6 +21,21 @@
 
   let serverUrl = "http://127.0.0.1:8000";
   let showConn = false;
+  let inputSource = "ui";  // "ui" | "hardware"
+  let srcBusy = false;
+
+  async function toggleSource() {
+    const next = inputSource === "ui" ? "hardware" : "ui";
+    srcBusy = true;
+    try {
+      const r = await setInputSource(getServerUrl(), next);
+      inputSource = r.input_source || next;
+    } catch (e) {
+      // leave as-is on failure
+    } finally {
+      srcBusy = false;
+    }
+  }
 </script>
 
 <nav>
@@ -37,6 +52,11 @@
       >{link.label}</button>
     {/each}
   </div>
+
+  <button class="srctoggle {inputSource}" on:click={toggleSource} disabled={srcBusy} title="Switch control between UI sliders and physical knobs/panel">
+    <span class="srcdot"></span>
+    {inputSource === "hardware" ? "Hardware" : "UI"} control
+  </button>
 
   <div class="conn">
     <button class="pill" on:click={() => (showConn = !showConn)}>
@@ -104,4 +124,11 @@
   .ghost { background: transparent; border: 1px solid var(--line); color: var(--text);
     padding: 8px; border-radius: 8px; cursor: pointer; font: inherit; }
   .msg { font-size: 0.8rem; margin: 0; }
+
+  .srctoggle { display: flex; align-items: center; gap: 7px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 0.85rem; margin-right: 10px; }
+  .srctoggle:hover { background: var(--panel); }
+  .srctoggle:disabled { opacity: 0.6; cursor: wait; }
+  .srctoggle .srcdot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .srctoggle.hardware { border-color: var(--accent); }
+  .srctoggle.hardware .srcdot { background: #ff9f43; box-shadow: 0 0 6px #ff9f43; }
 </style>

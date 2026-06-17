@@ -1,0 +1,7 @@
+obj_dir/
+*.out
+build_*.log
+*.jou
+*.log
+vivado_project*/
+.Xil/

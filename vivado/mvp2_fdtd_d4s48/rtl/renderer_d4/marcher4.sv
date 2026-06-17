@@ -17,8 +17,8 @@
 //  in-flight real pixels of that step (real pixels are 4 cycles apart and
 //  each step's read window is exactly 4 cycles).
 //
-//  Pipeline latency: 11 * N_STEPS cycles (march_step4 has eleven registered
-//  stages: A, B0..B5, D, D2, D3, E).
+//  Pipeline latency: 12 * N_STEPS cycles (march_step4 has twelve registered
+//  stages: A, B0..B5, D, D2, D3, D4, E).
 //  Throughput: 1 pixel / 4 cycles.
 //
 //  h_hit_out is the bilinearly-interpolated surface height (smooth), as in
@@ -54,10 +54,6 @@ module marcher4 #(
     parameter bit  INTERP_IN_MARCHER = 1'b1,
 
     parameter logic signed [POS_W-1:0] WORLD_HALF = (1 <<< POS_F),
-    // 1-cell step (DT=256, power of two -> position advance is a free shift) for
-    // the finest surface detail. Reach = N_STEPS*DT; 58 steps -> ~1.81 units,
-    // which covers the near/mid view (far diagonal clips on a wide zoom-out).
-    // For full coverage instead, use DT=4*WORLD_HALF/GRID_N (=512, 2-cell step).
     parameter logic signed [POS_W-1:0] DT         = (2 * WORLD_HALF) / GRID_N
 )(
     input  logic                       clk,
@@ -209,9 +205,9 @@ module marcher4 #(
     assign valid_out      = v_chain[N_STEPS];
 
     // -----------------------------------------------------------------
-    //  Pixel-coordinate delay line. Eleven internal stages per step.
+    //  Pixel-coordinate delay line. Twelve internal stages per step.
     // -----------------------------------------------------------------
-    localparam int LATENCY = 11 * N_STEPS;
+    localparam int LATENCY = 12 * N_STEPS;
 
     logic [PX_W-1:0]  px_pipe [LATENCY];
     logic [PY_W-1:0]  py_pipe [LATENCY];

@@ -10,7 +10,8 @@
 //      (dual-clock writable, 8-bit storage); the FDTD bridge writes them via
 //      hm_we/hm_waddr/hm_wdata @ clk_pix, broadcast to all copies.
 //    - vblank exported so the bridge writes the heightmap during blanking.
-//  Camera basis is fixed (Cyril's isometric view). N_STEPS=48, GRID_N=64.
+//  Camera basis defaults to Cyril's isometric view and can be updated from PS.
+//  N_STEPS=48, GRID_N=64.
 // ============================================================================
 module d4s48_core_impl (
     input  wire        clk_pix,
@@ -46,9 +47,9 @@ module d4s48_core_impl (
     localparam int V_TOTAL = H + V_FRONT + V_SYNC + V_BACK;
     localparam int PX_W = 10, PY_W = 9;
     localparam int GRID_N = 64, IDX_W = 6, ADDR_W = IDX_W*2;
-    localparam int N_STEPS = 58, H_W = 16, DIR_W = 16, POS_W = 16;  // 58 steps (1-cell march, finest detail)
+    localparam int N_STEPS = 48, H_W = 16, DIR_W = 16, POS_W = 16;
 
-    localparam int RENDER_LATENCY_CORE = 4 + 11*N_STEPS + 5 + 5;
+    localparam int RENDER_LATENCY_CORE = 4 + 12*N_STEPS + 5 + 5;
     localparam int RENDER_LATENCY_PIX  = (RENDER_LATENCY_CORE + 3) / 4;
     localparam int FIFO_PRIME_PIX      = 8;
     localparam int VIDEO_DELAY_PIX     = RENDER_LATENCY_PIX + FIFO_PRIME_PIX;

@@ -2,12 +2,12 @@
 #  create_fdtd_render_project.tcl
 #
 #  Builds MVP2_fdtd_hdmi — the FDTD solver + ping-pong s_mag buffers feeding the
-#  D1S48 ray-march renderer out over HDMI, all PS-controllable.
+#  D4S48 low-DSP ray-march renderer out over HDMI, all PS-controllable.
 #
 #  Pipeline (single 25 MHz clk_pix domain for the whole datapath):
 #    CORDIC -> fdtd_solver -> field_magnitude -> ping-pong s_mag BRAMs
-#           -> s_mag_to_heightmap_bridge -> 52 writable heightmap BRAMs
-#           -> D1S48 ray_unit -> rgb2dvi -> HDMI
+#           -> s_mag_to_heightmap_bridge -> 50 writable heightmap BRAMs
+#           -> D4S48 ray_unit -> rgb2dvi -> HDMI
 #
 #  Clocks:
 #    external 125 MHz (H16) -> clk_wiz -> clk_out1 25 MHz (clk_pix, whole datapath)
@@ -29,13 +29,17 @@
 #  Env: RUN_SYNTH=1 also runs synth (+ impl/bit if RUN_IMPL=1). VIVADO_JOBS=N.
 # =============================================================================
 
-set proj_name "MVP2_fdtd_d4s48"
-set proj_dir  "E:/Vivado/Projects/desperate_yi/MVP2_fdtd_d4s48"
+set script_dir [file normalize [file dirname [info script]]]
+set design_dir [file normalize [file join $script_dir ..]]
+set proj_name  "MVP2_fdtd_d4s48"
+set proj_dir   [file normalize [file join $design_dir vivado_project]]
+if {[info exists ::env(MVP2_PROJ_DIR)] && $::env(MVP2_PROJ_DIR) ne ""} {
+    set proj_dir [file normalize $::env(MVP2_PROJ_DIR)]
+}
 set part      "xc7z020clg400-1"
-set rtl_dir   [file join $proj_dir rtl]
+set rtl_dir   [file join $design_dir rtl]
 set ip_repo   [file join $proj_dir ip_repo]
 set ip_work   [file join $proj_dir .ip_packager_work]
-set dvi_lib   "E:/Vivado/Projects/desperate_yi/MVP2_2D_EE_simulation/third_party/vivado-library/ip"
 set bd_name   "fdtd_hdmi_bd"
 set jobs      4
 if {[info exists ::env(VIVADO_JOBS)]} { set jobs $::env(VIVADO_JOBS) }
@@ -43,6 +47,25 @@ set run_synth 0
 set run_impl  0
 if {[info exists ::env(RUN_SYNTH)] && $::env(RUN_SYNTH) eq "1"} { set run_synth 1 }
 if {[info exists ::env(RUN_IMPL)]  && $::env(RUN_IMPL)  eq "1"} { set run_impl  1 ; set run_synth 1 }
+
+set dvi_lib ""
+set dvi_candidates [list]
+if {[info exists ::env(DIGILENT_IP_REPO)] && $::env(DIGILENT_IP_REPO) ne ""} {
+    lappend dvi_candidates [file normalize $::env(DIGILENT_IP_REPO)]
+}
+foreach p [list \
+    [file join $design_dir third_party vivado-library ip] \
+    [file join $design_dir .. .. vivado-library-master ip] \
+    D:/ic/vivado-library-master/ip \
+    C:/Xilinx/vivado-library-master/ip \
+] {
+    lappend dvi_candidates [file normalize $p]
+}
+foreach p $dvi_candidates {
+    if {$dvi_lib eq "" && [file exists [file join $p rgb2dvi component.xml]]} {
+        set dvi_lib $p
+    }
+}
 
 # ---------------------------------------------------------------------------
 #  Helpers
@@ -151,7 +174,7 @@ package_ip $part $ip_repo $ip_work \
 package_ip $part $ip_repo $ip_work \
     s_mag_to_heightmap_bridge s_mag_to_heightmap_bridge \
     [list] [list [file join $rtl_dir integration s_mag_to_heightmap_bridge.sv]] \
-    "FDTD s_mag -> renderer heightmap bridge (vblank-gated, 52-way broadcast)."
+    "FDTD s_mag -> renderer heightmap bridge (vblank-gated, 50-way broadcast)."
 
 # ---------------------------------------------------------------------------
 #  Step 2 — Create main project
@@ -162,7 +185,7 @@ set_property XPM_LIBRARIES {XPM_FIFO XPM_CDC XPM_MEMORY} [current_project]
 set_property simulator_language Mixed [current_project]
 
 set ip_paths [list $ip_repo]
-if {[file exists [file join $dvi_lib rgb2dvi component.xml]]} {
+if {$dvi_lib ne "" && [file exists [file join $dvi_lib rgb2dvi component.xml]]} {
     lappend ip_paths $dvi_lib
 } else {
     puts "WARNING: rgb2dvi not found at $dvi_lib — HDMI serialiser will be missing."
@@ -176,7 +199,7 @@ if {[llength $pynq_boards] > 0} {
 }
 
 # Renderer sources (D4S48 3D ray-march: module-ref d4s48_renderer_core_bd +
-# 50 writable 8-bit dual-clock heightmap copies, ray_unit4 pipeline)
+# 50 writable 8-bit dual-clock heightmap copies, low-DSP ray_unit4 pipeline)
 set rend_files [list \
     [file join $rtl_dir renderer_d4 d4s48_renderer_core_bd.v]     \
     [file join $rtl_dir renderer_d4 d4s48_core_impl.sv]           \
@@ -332,7 +355,7 @@ create_bd_cell -type module -reference d4s48_renderer_core_bd renderer_0
 connect_bd_net $CLKP      [get_bd_pins renderer_0/clk_pix]
 connect_bd_net $CLKCORE   [get_bd_pins renderer_0/clk_core]
 connect_bd_net $PIX_ARSTN [get_bd_pins renderer_0/rst_pix_n]
-# (D4S48: render core @100MHz, async-FIFO to 25MHz scanout; fixed camera)
+# (D4S48: render core @100MHz, async-FIFO to 25MHz scanout; PS-loadable camera)
 # heightmap write port from bridge ; vblank back to bridge
 connect_bd_net [get_bd_pins bridge_0/hm_we]    [get_bd_pins renderer_0/hm_we]
 connect_bd_net [get_bd_pins bridge_0/hm_waddr] [get_bd_pins renderer_0/hm_waddr]

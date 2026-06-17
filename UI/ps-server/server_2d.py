@@ -100,7 +100,7 @@ def handle_2d_message(payload):
     return {"ok": True, "applied": done}
 
 
-# ---- input authority: "ui" or "hardware" ----
+
 _input = {"source": "ui"}
 
 def set_input_source(source):

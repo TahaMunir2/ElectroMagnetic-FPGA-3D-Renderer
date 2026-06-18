@@ -56,7 +56,7 @@ class Renderer2D:
         self.palette = MMIO(0x41220000, 0x10000)
         self._palette_commit = 0
 
-    # ---- main control ----
+
     def set_ctrl(self, phase_step, amplitude, source_addr, solver_enable,
                  mag_mode, sample_req, free_run, height_ctl=DEFAULT_HEIGHT):
         ch1 = (q313(amplitude) << 16) | q313(phase_step)
@@ -113,12 +113,12 @@ class Renderer2D:
         time.sleep(0.005)
         self.ctrl.write(GPIO_CH2, v & ~(1 << 24))
 
-    # ---- speed throttle (MOTION) ----
+
     def set_speed(self, idle_cycles):
         ch2 = (self.motion.read(0x8) & 0xFF) | ((idle_cycles & 0xFFFFFF) << 8)
         self.motion.write(0x8, ch2)
 
-    # ---- palette ----
+
     def set_palette(self, rgb16):
         assert len(rgb16) == 16, "need 16 (R,G,B) tuples"
         for i, (r, g, b) in enumerate(rgb16):
@@ -132,7 +132,7 @@ class Renderer2D:
         self.set_palette(pal)
         return pal
 
-# ---- motion / Doppler (MOTION block) ----
+
     def _s16(self, v):
         iv = max(-32768, min(32767, int(round(v * 256))))
         return iv & 0xFFFF

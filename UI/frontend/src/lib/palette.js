@@ -1,7 +1,3 @@
-// Real validated palettes from the FDTD notebook. NORMAL = rainbow; the three
-// CVD palettes are perceptually-separated ramps (PuOr / coolwarm / RdBu) with
-// documented min band-separation. The PS writes these same 16 colours to the
-// PALETTE registers; the UI draws the matching colour-bar.
 
 export const PALETTES = {
   none: [

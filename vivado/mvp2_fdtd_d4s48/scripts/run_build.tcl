@@ -1,6 +1,11 @@
 # Open the existing MVP2_fdtd_hdmi project and run synth -> impl -> bitstream,
 # emitting utilization / timing / DRC reports.
-set proj_dir "E:/Vivado/Projects/desperate_yi/MVP2_fdtd_d4s48"
+set script_dir [file normalize [file dirname [info script]]]
+set design_dir [file normalize [file join $script_dir ..]]
+set proj_dir [file normalize [file join $design_dir vivado_project]]
+if {[info exists ::env(MVP2_PROJ_DIR)] && $::env(MVP2_PROJ_DIR) ne ""} {
+    set proj_dir [file normalize $::env(MVP2_PROJ_DIR)]
+}
 set jobs 4
 if {[info exists ::env(VIVADO_JOBS)]} { set jobs $::env(VIVADO_JOBS) }
 
@@ -38,7 +43,16 @@ set bit [file join $proj_dir MVP2_fdtd_d4s48.runs impl_1 fdtd_hdmi_bd_wrapper.bi
 if {[file exists $bit]} {
     file copy -force $bit [file join $proj_dir fdtd_hdmi.bit]
     puts "INFO: bitstream -> [file join $proj_dir fdtd_hdmi.bit]"
+    file copy -force $bit [file join $design_dir fdtd_hdmi.bit]
+    puts "INFO: bitstream -> [file join $design_dir fdtd_hdmi.bit]"
 } else {
     puts "WARNING: bitstream not found at $bit"
+}
+set hwh [file join $proj_dir MVP2_fdtd_d4s48.gen sources_1 bd fdtd_hdmi_bd hw_handoff fdtd_hdmi_bd.hwh]
+if {[file exists $hwh]} {
+    file copy -force $hwh [file join $design_dir fdtd_hdmi.hwh]
+    puts "INFO: hwh -> [file join $design_dir fdtd_hdmi.hwh]"
+} else {
+    puts "WARNING: hwh not found at $hwh"
 }
 puts "INFO: run_build.tcl done."

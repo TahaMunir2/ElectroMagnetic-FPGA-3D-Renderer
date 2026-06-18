@@ -28,7 +28,7 @@
 //  pixel only every 4 cycles (quarter-rate), so the single port is never
 //  contended between pixels.
 //
-//  PIPELINE (11 stages, latency = 11 cycles):
+//  PIPELINE (12 stages, latency = 12 cycles):
 //      A    : advance position P += dt*D
 //      B0   : compute ix0/iy0/ix1/iy1, xf, yf; issue addr(h00)
 //      B1   : capture h00; issue addr(h10)
@@ -36,11 +36,12 @@
 //      B3   : capture h01; issue addr(h11)
 //      B4   : capture h11   -> all 4 corners held
 //      B5   : align valid and payload with the captured corners
-//      D    : x-lerps  -> h_top, h_bot
-//      D2   : y-lerp   -> registered h_interp
-//      D3   : below/cross compare and hit-state update
-//      E    : output buffer
-//      (A + B0..B5 + D + D2 + D3 + E = 1+6+1+1+1+1 = 11)
+//      D    : top x-product
+//      D2   : top add; bottom x-product
+//      D3   : bottom add
+//      D4   : y-product
+//      E    : y add, below/cross compare, and output buffer
+//      (A + B0..B5 + D + D2 + D3 + D4 + E = 1+6+1+1+1+1+1 = 12)
 //
 //  PRESERVED INVARIANTS (identical to march_step3):
 //    - Frozen-ray pattern; Bug 2 fix (step 0 cannot HIT).
@@ -72,7 +73,6 @@ module march_step4 #(
     parameter int FRAC_W     = 8,
 
     parameter logic signed [POS_W-1:0] WORLD_HALF = (1 <<< POS_F),
-    // 1-cell step (matches marcher4); marcher4 passes .DT explicitly
     parameter logic signed [POS_W-1:0] DT = (2 * WORLD_HALF) / GRID_N
 )(
     input  logic                       clk,
@@ -472,20 +472,17 @@ module march_step4 #(
 
 
     // =================================================================
-    //  STAGE D: x-direction lerps (identical arithmetic to march_step3).
+    //  STAGES D..E: bilinear interpolation using one registered DSP.
+    //  Real pixels arrive at B5 once every four cycles.  The three lerp
+    //  multiplies are scheduled across those cycles, and the DSP product is
+    //  registered before the following add.  This keeps the one-DSP-per-step
+    //  resource target without creating a subtract -> DSP -> add timing path.
     // =================================================================
-    logic signed [H_W:0]            diff_top_comb, diff_bot_comb;
-    logic signed [H_W+FRAC_W:0]     prod_top_comb, prod_bot_comb;
-    logic signed [H_W-1:0]          h_top_comb, h_bot_comb;
+    localparam int H_ALIGN_SHIFT = POS_F - H_F;
 
-    always_comb begin
-        diff_top_comb = $signed(h10_B4) - $signed(h00_B4);
-        diff_bot_comb = $signed(h11_B4) - $signed(h01_B4);
-        prod_top_comb = diff_top_comb * $signed({1'b0, xf_B4});
-        prod_bot_comb = diff_bot_comb * $signed({1'b0, xf_B4});
-        h_top_comb = $signed(h00_B4) + prod_top_comb[H_W+FRAC_W-1 -: H_W];
-        h_bot_comb = $signed(h01_B4) + prod_bot_comb[H_W+FRAC_W-1 -: H_W];
-    end
+    logic signed [H_W:0]            interp_diff_comb;
+    logic signed [FRAC_W:0]         interp_frac_comb;
+    (* use_dsp = "yes" *) logic signed [H_W+FRAC_W:0] interp_prod_q;
 
     logic signed [POS_W-1:0]  Px_D, Py_D, Pz_D;
     logic signed [DIR_W-1:0]  Dx_D, Dy_D, Dz_D;
@@ -496,53 +493,89 @@ module march_step4 #(
     logic signed [POS_W-1:0]  Px_hit_D, Py_hit_D;
     logic [STEP_W-1:0]        step_count_D;
     logic                     v_D;
-    logic [FRAC_W-1:0]        yf_D;
-    logic signed [H_W-1:0]    h_top_D, h_bot_D;
-
-    always_ff @(posedge clk) begin
-        if (!rst_n) v_D <= 1'b0;
-        else if (en) begin
-            // Payload + valid come from the B5 alignment stage so they are
-            // co-incident with the B4 corner registers holding THIS pixel's
-            // four corners.  The lerp (above) reads the corners + xf live from
-            // the B4 registers on this same cycle.
-            Px_D<=Px_B5; Py_D<=Py_B5; Pz_D<=Pz_B5;
-            Dx_D<=Dx_B5; Dy_D<=Dy_B5; Dz_D<=Dz_B5;
-            stat_D<=stat_B5; prev_D<=prev_B5; v_D<=v_B5;
-            h_hit_D<=h_hit_B5; ix_hit_D<=ix_hit_B5; iy_hit_D<=iy_hit_B5;
-            Px_hit_D<=Px_hit_B5; Py_hit_D<=Py_hit_B5; step_count_D<=step_count_B5;
-            yf_D<=yf_B5;
-            h_top_D <= h_top_comb;
-            h_bot_D <= h_bot_comb;
-        end
-    end
-
-
-    // =================================================================
-    //  STAGE D2: y-lerp register.
-    // =================================================================
-    localparam int H_ALIGN_SHIFT = POS_F - H_F;
-
-    logic signed [H_W:0]          diff_y_comb;
-    logic signed [H_W+FRAC_W:0]   prod_y_comb;
-    logic signed [H_W-1:0]        h_interp_comb;
-
-    always_comb begin
-        diff_y_comb   = $signed(h_bot_D) - $signed(h_top_D);
-        prod_y_comb   = diff_y_comb * $signed({1'b0, yf_D});
-        h_interp_comb = $signed(h_top_D) + prod_y_comb[H_W+FRAC_W-1 -: H_W];
-    end
+    logic [FRAC_W-1:0]        xf_D, yf_D;
+    logic signed [H_W-1:0]    h00_D, h01_D, h11_D;
 
     logic signed [POS_W-1:0]  Px_D2, Py_D2, Pz_D2;
     logic signed [DIR_W-1:0]  Dx_D2, Dy_D2, Dz_D2;
     logic [1:0]               stat_D2;
     logic                     prev_D2;
     logic signed [H_W-1:0]    h_hit_D2;
-    logic signed [H_W-1:0]    h_interp_D2;
+    logic signed [H_W-1:0]    h_top_D2, h01_D2;
     logic [IDX_W-1:0]         ix_hit_D2, iy_hit_D2;
     logic signed [POS_W-1:0]  Px_hit_D2, Py_hit_D2;
     logic [STEP_W-1:0]        step_count_D2;
     logic                     v_D2;
+    logic [FRAC_W-1:0]        yf_D2;
+
+    logic signed [POS_W-1:0]  Px_D3, Py_D3, Pz_D3;
+    logic signed [DIR_W-1:0]  Dx_D3, Dy_D3, Dz_D3;
+    logic [1:0]               stat_D3;
+    logic                     prev_D3;
+    logic signed [H_W-1:0]    h_hit_D3;
+    logic signed [H_W-1:0]    h_top_D3, h_bot_D3;
+    logic [IDX_W-1:0]         ix_hit_D3, iy_hit_D3;
+    logic signed [POS_W-1:0]  Px_hit_D3, Py_hit_D3;
+    logic [STEP_W-1:0]        step_count_D3;
+    logic                     v_D3;
+    logic [FRAC_W-1:0]        yf_D3;
+
+    logic signed [POS_W-1:0]  Px_D4, Py_D4, Pz_D4;
+    logic signed [DIR_W-1:0]  Dx_D4, Dy_D4, Dz_D4;
+    logic [1:0]               stat_D4;
+    logic                     prev_D4;
+    logic signed [H_W-1:0]    h_hit_D4;
+    logic signed [H_W-1:0]    h_top_D4;
+    logic [IDX_W-1:0]         ix_hit_D4, iy_hit_D4;
+    logic signed [POS_W-1:0]  Px_hit_D4, Py_hit_D4;
+    logic [STEP_W-1:0]        step_count_D4;
+    logic                     v_D4;
+
+    always_comb begin
+        if (v_D) begin
+            // Cycle 1 after B5: bottom x-product.
+            interp_diff_comb = $signed(h11_D) - $signed(h01_D);
+            interp_frac_comb = $signed({1'b0, xf_D});
+        end else if (v_D3) begin
+            // Cycle 3 after B5: y-product.
+            interp_diff_comb = $signed(h_bot_D3) - $signed(h_top_D3);
+            interp_frac_comb = $signed({1'b0, yf_D3});
+        end else begin
+            // B5 cycle: top x-product.  Payload comes from B5, while the four
+            // corner registers and xf are read live from B4, matching the
+            // original alignment.
+            interp_diff_comb = $signed(h10_B4) - $signed(h00_B4);
+            interp_frac_comb = $signed({1'b0, xf_B4});
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (en)
+            interp_prod_q <= interp_diff_comb * interp_frac_comb;
+    end
+
+    logic signed [H_W-1:0] h_top_add_comb;
+    logic signed [H_W-1:0] h_bot_add_comb;
+    logic signed [H_W-1:0] h_interp_add_comb;
+
+    always_comb begin
+        h_top_add_comb    = $signed(h00_D)    + interp_prod_q[H_W+FRAC_W-1 -: H_W];
+        h_bot_add_comb    = $signed(h01_D2)   + interp_prod_q[H_W+FRAC_W-1 -: H_W];
+        h_interp_add_comb = $signed(h_top_D4) + interp_prod_q[H_W+FRAC_W-1 -: H_W];
+    end
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) v_D <= 1'b0;
+        else if (en) begin
+            Px_D<=Px_B5; Py_D<=Py_B5; Pz_D<=Pz_B5;
+            Dx_D<=Dx_B5; Dy_D<=Dy_B5; Dz_D<=Dz_B5;
+            stat_D<=stat_B5; prev_D<=prev_B5; v_D<=v_B5;
+            h_hit_D<=h_hit_B5; ix_hit_D<=ix_hit_B5; iy_hit_D<=iy_hit_B5;
+            Px_hit_D<=Px_hit_B5; Py_hit_D<=Py_hit_B5; step_count_D<=step_count_B5;
+            xf_D<=xf_B4; yf_D<=yf_B5;
+            h00_D<=h00_B4; h01_D<=h01_B4; h11_D<=h11_B4;
+        end
+    end
 
     always_ff @(posedge clk) begin
         if (!rst_n) v_D2 <= 1'b0;
@@ -550,82 +583,87 @@ module march_step4 #(
             Px_D2<=Px_D; Py_D2<=Py_D; Pz_D2<=Pz_D;
             Dx_D2<=Dx_D; Dy_D2<=Dy_D; Dz_D2<=Dz_D;
             stat_D2<=stat_D; prev_D2<=prev_D; h_hit_D2<=h_hit_D;
-            h_interp_D2<=h_interp_comb;
+            h_top_D2<=h_top_add_comb;
+            h01_D2<=h01_D;
+            yf_D2<=yf_D;
             ix_hit_D2<=ix_hit_D; iy_hit_D2<=iy_hit_D;
             Px_hit_D2<=Px_hit_D; Py_hit_D2<=Py_hit_D;
             step_count_D2<=step_count_D; v_D2<=v_D;
         end
     end
 
-
-    // =================================================================
-    //  STAGE D3: height comparison and hit-state update.
-    // =================================================================
-    logic signed [POS_W-1:0] h_aligned_D3;
-    logic                    below_D3;
-    logic                    crossed_D3;
-
-    always_comb begin
-        h_aligned_D3 = $signed(h_interp_D2) <<< H_ALIGN_SHIFT;
-        below_D3 = (Pz_D2 < h_aligned_D3);
-        crossed_D3 = (stat_D2 == ST_MARCHING)
-                  && (below_D3 != prev_D2)
-                  && (step_count_D2 != '0);
-    end
-
-    logic signed [POS_W-1:0]  Px_D3, Py_D3, Pz_D3;
-    logic signed [DIR_W-1:0]  Dx_D3, Dy_D3, Dz_D3;
-    logic [1:0]               stat_D3;
-    logic                     prev_D3;
-    logic signed [H_W-1:0]    h_hit_D3;
-    logic [IDX_W-1:0]         ix_hit_D3, iy_hit_D3;
-    logic signed [POS_W-1:0]  Px_hit_D3, Py_hit_D3;
-    logic [STEP_W-1:0]        step_count_D3;
-    logic                     v_D3;
-
     always_ff @(posedge clk) begin
         if (!rst_n) v_D3 <= 1'b0;
         else if (en) begin
             Px_D3<=Px_D2; Py_D3<=Py_D2; Pz_D3<=Pz_D2;
             Dx_D3<=Dx_D2; Dy_D3<=Dy_D2; Dz_D3<=Dz_D2;
+            stat_D3<=stat_D2; prev_D3<=prev_D2; h_hit_D3<=h_hit_D2;
+            h_top_D3<=h_top_D2;
+            h_bot_D3<=h_bot_add_comb;
+            yf_D3<=yf_D2;
+            ix_hit_D3<=ix_hit_D2; iy_hit_D3<=iy_hit_D2;
+            Px_hit_D3<=Px_hit_D2; Py_hit_D3<=Py_hit_D2;
             step_count_D3<=step_count_D2; v_D3<=v_D2;
-
-            if (stat_D2 == ST_MARCHING && crossed_D3) begin
-                stat_D3   <= ST_HIT;
-                h_hit_D3  <= h_interp_D2;
-                ix_hit_D3 <= ix_hit_D2;
-                iy_hit_D3 <= iy_hit_D2;
-                Px_hit_D3 <= Px_hit_D2;
-                Py_hit_D3 <= Py_hit_D2;
-            end else begin
-                stat_D3   <= stat_D2;
-                h_hit_D3  <= h_hit_D2;
-                ix_hit_D3 <= ix_hit_D2;
-                iy_hit_D3 <= iy_hit_D2;
-                Px_hit_D3 <= Px_hit_D2;
-                Py_hit_D3 <= Py_hit_D2;
-            end
-
-            if (stat_D2 == ST_MARCHING)
-                prev_D3 <= below_D3;
-            else
-                prev_D3 <= prev_D2;
         end
     end
 
+    always_ff @(posedge clk) begin
+        if (!rst_n) v_D4 <= 1'b0;
+        else if (en) begin
+            Px_D4<=Px_D3; Py_D4<=Py_D3; Pz_D4<=Pz_D3;
+            Dx_D4<=Dx_D3; Dy_D4<=Dy_D3; Dz_D4<=Dz_D3;
+            stat_D4<=stat_D3; prev_D4<=prev_D3; h_hit_D4<=h_hit_D3;
+            h_top_D4<=h_top_D3;
+            ix_hit_D4<=ix_hit_D3; iy_hit_D4<=iy_hit_D3;
+            Px_hit_D4<=Px_hit_D3; Py_hit_D4<=Py_hit_D3;
+            step_count_D4<=step_count_D3; v_D4<=v_D3;
+        end
+    end
 
     // =================================================================
-    //  STAGE E: output buffer.
+    //  STAGE E: y-add, height comparison, hit-state update, output buffer.
     // =================================================================
+    logic signed [POS_W-1:0] h_aligned_E;
+    logic                    below_E;
+    logic                    crossed_E;
+
+    always_comb begin
+        h_aligned_E = $signed(h_interp_add_comb) <<< H_ALIGN_SHIFT;
+        below_E = (Pz_D4 < h_aligned_E);
+        crossed_E = (stat_D4 == ST_MARCHING)
+                 && (below_E != prev_D4)
+                 && (step_count_D4 != '0);
+    end
+
     always_ff @(posedge clk) begin
         if (!rst_n) valid_out <= 1'b0;
         else if (en) begin
-            Px_out<=Px_D3; Py_out<=Py_D3; Pz_out<=Pz_D3;
-            Dx_out<=Dx_D3; Dy_out<=Dy_D3; Dz_out<=Dz_D3;
-            status_out<=stat_D3; prev_below_out<=prev_D3;
-            h_hit_out<=h_hit_D3; ix_hit_out<=ix_hit_D3; iy_hit_out<=iy_hit_D3;
-            Px_hit_out<=Px_hit_D3; Py_hit_out<=Py_hit_D3; step_count_out<=step_count_D3;
-            valid_out<=v_D3;
+            Px_out<=Px_D4; Py_out<=Py_D4; Pz_out<=Pz_D4;
+            Dx_out<=Dx_D4; Dy_out<=Dy_D4; Dz_out<=Dz_D4;
+
+            if (stat_D4 == ST_MARCHING && crossed_E) begin
+                status_out <= ST_HIT;
+                h_hit_out  <= h_interp_add_comb;
+                ix_hit_out <= ix_hit_D4;
+                iy_hit_out <= iy_hit_D4;
+                Px_hit_out <= Px_hit_D4;
+                Py_hit_out <= Py_hit_D4;
+            end else begin
+                status_out <= stat_D4;
+                h_hit_out  <= h_hit_D4;
+                ix_hit_out <= ix_hit_D4;
+                iy_hit_out <= iy_hit_D4;
+                Px_hit_out <= Px_hit_D4;
+                Py_hit_out <= Py_hit_D4;
+            end
+
+            if (stat_D4 == ST_MARCHING)
+                prev_below_out <= below_E;
+            else
+                prev_below_out <= prev_D4;
+
+            step_count_out<=step_count_D4;
+            valid_out<=v_D4;
         end
     end
 

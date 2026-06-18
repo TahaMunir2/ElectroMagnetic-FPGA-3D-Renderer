@@ -14,10 +14,10 @@
 //
 //  Pipeline latency (D4S48):
 //      ray_gen  :   4 cycles
-//      marcher4 : 528 cycles (48 march_step4 * 11-cycle latency)
+//      marcher4 : 576 cycles (48 march_step4 * 12-cycle latency)
 //      normal4  :   5 cycles
 //      shader   :   5 cycles
-//      TOTAL    : 542 cycles
+//      TOTAL    : 590 cycles
 //
 //  Throughput: 1 pixel / 4 cycles.
 // ============================================================================

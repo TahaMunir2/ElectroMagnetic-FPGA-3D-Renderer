@@ -13,7 +13,7 @@
 //      from the ping-pong controller), which the ping-pong guarantees is a
 //      complete, stable frame.  read_sel is LATCHED at the start of each burst
 //      so a mid-burst buffer swap can't switch the source under us.
-//    * Consumer side : it writes the 52 single-buffered heightmap BRAMs ONLY
+//    * Consumer side : it writes the renderer heightmap BRAM copies ONLY
 //      during vertical blanking (vblank=1), when the renderer issues no reads.
 //      A guard delay lets the render pipeline (RENDER_LATENCY) drain first.
 //

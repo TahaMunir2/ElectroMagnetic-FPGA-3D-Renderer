@@ -24,7 +24,7 @@ class Renderer3D:
         self.camb   = MMIO(0x41240000, 0x10000)
         self.camc   = MMIO(0x41250000, 0x10000)
 
-    # ---- solver control (same as 2D) ----
+
     def set_ctrl(self, phase_step, amplitude, source_addr, solver_enable,
                  mag_mode, sample_req, free_run, height_ctl=3):
         ch1 = (q313(amplitude) << 16) | q313(phase_step)
@@ -84,7 +84,7 @@ class Renderer3D:
         ch2 = (self.motion.read(0x8) & 0xFF) | ((idle_cycles & 0xFFFFFF) << 8)
         self.motion.write(0x8, ch2)
 
-    # ---- camera ----
+
     def _q(self, v):
         iv = max(-32768, min(32767, int(round(v * 8192))))
         return iv & 0xFFFF
